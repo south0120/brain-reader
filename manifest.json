@@ -1,0 +1,29 @@
+{
+    "manifest_version": 3,
+    "name": "Brain学習アシスト",
+    "version": "1.0",
+    "description": "Brain記事をKindleのように読む：栞・ハイライト・メモ・進捗管理",
+    "permissions": ["storage", "clipboardWrite"],
+    "icons": {
+      "16": "icon16.png",
+      "32": "icon32.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    },
+    "action": {
+      "default_title": "Brain Reader",
+      "default_icon": {
+        "16": "icon16.png",
+        "32": "icon32.png",
+        "48": "icon48.png",
+        "128": "icon128.png"
+      }
+    },
+    "content_scripts": [
+      {
+        "matches": ["https://brain-market.com/*"],
+        "js": ["content.js"],
+        "run_at": "document_idle"
+      }
+    ]
+  }
