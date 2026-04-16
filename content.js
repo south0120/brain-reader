@@ -121,6 +121,17 @@
       .br-cal-cell.br-cal-i2 .br-cal-n{color:#7c2d12}
       .br-cal-cell.br-cal-today{outline:2px solid #1f2937;outline-offset:-1px}
       .br-cal-summary{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:10px}
+      .br-streak-banner{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);background:linear-gradient(135deg,#1a1a2e 0%,#2d1b69 100%);border:2px solid #6c63ff;border-radius:20px;padding:30px 40px;z-index:1000001;text-align:center;color:#fff;animation:br-streak-pop .5s ease-out forwards;box-shadow:0 20px 60px rgba(108,99,255,.4)}
+      @keyframes br-streak-pop{0%{transform:translate(-50%,-50%) scale(0);opacity:0}60%{transform:translate(-50%,-50%) scale(1.1)}100%{transform:translate(-50%,-50%) scale(1);opacity:1}}
+      .br-streak-banner .br-streak-fire{font-size:48px;margin-bottom:8px}
+      .br-streak-banner .br-streak-num{font-size:36px;font-weight:900;color:#fbbf24;text-shadow:0 0 20px rgba(251,191,36,.5)}
+      .br-streak-banner .br-streak-msg{font-size:14px;color:#a78bfa;margin-top:6px}
+      .br-streak-banner .br-streak-close{position:absolute;top:10px;right:14px;background:none;border:none;color:#888;font-size:18px;cursor:pointer}
+      .br-x-share-btn{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;background:#16213e;border:1px solid #2d2d4e;border-radius:6px;color:#aaa;font-size:11px;cursor:pointer;transition:all .2s;margin-left:6px}
+      .br-x-share-btn:hover{background:#1d9bf0;color:#fff;border-color:#1d9bf0}
+      .br-x-share-btn svg{width:12px;height:12px}
+      .br-streak-share{margin-top:12px}
+      .br-hl-actions{display:flex;align-items:center;justify-content:flex-end;gap:4px;margin-top:4px}
       .br-cal-stat{background:#fff;border:1px solid #f1f1f1;border-radius:6px;padding:6px 8px;text-align:center}
       .br-cal-s-val{font-size:16px;font-weight:700;color:#ef4444;line-height:1}
       .br-cal-s-lbl{font-size:10px;color:#6b7280;margin-top:2px}
@@ -224,12 +235,23 @@
       return 'brain_reader_' + hashKey(id) + '_' + encodeURIComponent(location.pathname).replace(/[^a-zA-Z0-9]/g,'').slice(-24);
     }
     let SK = storageKey();
+
+    // ===== ストレージ抽象化（chrome.storage.sync + localStorage フォールバック）=====
+    const useSync = !!(typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync);
     function loadSt() {
       const def = {bookmarks:[],highlights:[],readSections:[],lastPosition:0,activityLog:{}};
       try { const d=localStorage.getItem(SK); const p=d?JSON.parse(d):{}; return Object.assign({}, def, p, {activityLog: p.activityLog || {}}); }
       catch(e) { return def; }
     }
-    function saveSt() { try{localStorage.setItem(SK,JSON.stringify(ST));}catch(e){} }
+    function saveSt() {
+      try{localStorage.setItem(SK,JSON.stringify(ST));}catch(e){}
+      // chrome.storage.sync にアクティビティログを同期（容量制限対策: ログのみsync）
+      if (useSync) {
+        try {
+          chrome.storage.sync.set({ [ACT_GLOBAL_KEY]: loadGlobalActivity() });
+        } catch(e) {}
+      }
+    }
     let ST = loadSt();
 
     // ===== 学習アクティビティ =====
@@ -241,7 +263,27 @@
     function loadGlobalActivity() {
       try { return JSON.parse(localStorage.getItem(ACT_GLOBAL_KEY)) || {}; } catch(e) { return {}; }
     }
-    function saveGlobalActivity(a) { try { localStorage.setItem(ACT_GLOBAL_KEY, JSON.stringify(a)); } catch(e) {} }
+    function saveGlobalActivity(a) {
+      try { localStorage.setItem(ACT_GLOBAL_KEY, JSON.stringify(a)); } catch(e) {}
+      if (useSync) { try { chrome.storage.sync.set({ [ACT_GLOBAL_KEY]: a }); } catch(e) {} }
+    }
+    // 起動時にchrome.storage.syncからアクティビティログを復元（他端末のデータをマージ）
+    if (useSync) {
+      try {
+        chrome.storage.sync.get([ACT_GLOBAL_KEY], result => {
+          const remote = result[ACT_GLOBAL_KEY];
+          if (remote && typeof remote === 'object') {
+            const local = loadGlobalActivity();
+            // マージ: 各日付でsectionsが大きい方を採用
+            Object.keys(remote).forEach(k => {
+              const r = remote[k], l = local[k];
+              if (!l || (r && r.sections > (l.sections||0))) local[k] = r;
+            });
+            try { localStorage.setItem(ACT_GLOBAL_KEY, JSON.stringify(local)); } catch(e) {}
+          }
+        });
+      } catch(e) {}
+    }
     function recordActivity(sectionDelta, scrollDelta) {
       const k = todayKey();
       if (!ST.activityLog) ST.activityLog = {};
@@ -349,6 +391,88 @@
     `;
     document.body.appendChild(panel);
   
+    // ===== Xシェア & ストリーク演出 =====
+    function xSvg() { return '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>'; }
+    // Brainページからアフィリエイトリンク(brmk.io)を自動検出
+    function detectAffiliateURL() {
+      // 1. ページ内のXシェアボタンのhrefからbrmk.ioリンクを抽出
+      const xLinks = document.querySelectorAll('a[href*="x.com/intent"], a[href*="twitter.com/intent"]');
+      for (const a of xLinks) {
+        const href = a.getAttribute('href') || '';
+        const m = href.match(/url=(https?%3A%2F%2Fbrmk\.io%2F[a-zA-Z0-9]+)/);
+        if (m) return decodeURIComponent(m[1]);
+      }
+      // 2. ページ内のaタグから直接brmk.ioリンクを探す
+      const brmkLinks = document.querySelectorAll('a[href*="brmk.io"]');
+      for (const a of brmkLinks) {
+        const href = a.getAttribute('href') || '';
+        if (/brmk\.io\/[a-zA-Z0-9]+/.test(href)) return href;
+      }
+      // 3. ページ内のonclickやdata属性からbrmk.ioリンクを探す
+      const all = document.body.innerHTML;
+      const brmkMatch = all.match(/https?:\/\/brmk\.io\/[a-zA-Z0-9]+/);
+      if (brmkMatch) return brmkMatch[0];
+      // 見つからなければ現在のページURLを使用
+      return location.href;
+    }
+    let _affiliateURL = null;
+    function getAffiliateURL() {
+      if (!_affiliateURL) _affiliateURL = detectAffiliateURL();
+      return _affiliateURL;
+    }
+    // ルート変更時にリセット
+    const _origOnRoute = typeof onRouteChange === 'function' ? null : null;
+    function resetAffiliateCache() { _affiliateURL = null; }
+    function shareOnX(text) {
+      const affURL = getAffiliateURL();
+      const fullText = text + '\n' + affURL;
+      const url = 'https://x.com/intent/tweet?text=' + encodeURIComponent(fullText);
+      window.open(url, '_blank', 'width=550,height=420');
+    }
+    function calcStreak() {
+      const log = loadGlobalActivity();
+      let streak = 0, cursor = new Date();
+      while (true) {
+        const k = cursor.getFullYear()+'-'+String(cursor.getMonth()+1).padStart(2,'0')+'-'+String(cursor.getDate()).padStart(2,'0');
+        const v = log[k];
+        const sec = v ? (typeof v === 'number' ? v : (v.sections||0)) : 0;
+        if (sec > 0) { streak++; cursor.setDate(cursor.getDate()-1); } else break;
+        if (streak > 365) break;
+      }
+      return streak;
+    }
+    function showStreakCelebration() {
+      const streak = calcStreak();
+      if (streak < 2) return;
+      // 3日未満はトーストのみ
+      if (streak < 5) { toast(`🔥 ${streak}日連続学習中！`); return; }
+      // 5日以上はバナー演出
+      let emoji = '🔥', msg = 'いい調子！';
+      if (streak >= 30) { emoji = '🏆'; msg = '圧倒的継続力！'; }
+      else if (streak >= 14) { emoji = '⚡'; msg = '学習が習慣になってる！'; }
+      else if (streak >= 7) { emoji = '🔥'; msg = 'すごい！1週間突破！'; }
+      const banner = document.createElement('div');
+      banner.className = 'br-streak-banner';
+      const monthLog = loadGlobalActivity();
+      const now = new Date();
+      const monthKey = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+      let monthSec = 0;
+      Object.keys(monthLog).forEach(k => { if (k.startsWith(monthKey)) { const v = monthLog[k]; monthSec += v ? (typeof v==='number'?v:(v.sections||0)) : 0; } });
+      const shareText = `Brain学習 ${emoji} ${streak}日連続中！今月${monthSec}セクション読了📚 #Brain学習 #継続は力なり`;
+      banner.innerHTML = `
+        <button class="br-streak-close" title="閉じる">✕</button>
+        <div class="br-streak-fire">${emoji}</div>
+        <div class="br-streak-num">${streak}日連続！</div>
+        <div class="br-streak-msg">${msg}</div>
+        <div class="br-streak-share">
+          <button class="br-x-share-btn" id="br-streak-x-btn">${xSvg()} ポストする</button>
+        </div>`;
+      document.body.appendChild(banner);
+      banner.querySelector('.br-streak-close').addEventListener('click', () => banner.remove());
+      banner.querySelector('#br-streak-x-btn').addEventListener('click', () => shareOnX(shareText));
+      setTimeout(() => { if (banner.parentNode) banner.remove(); }, 8000);
+    }
+
     // ===== ヘルパー関数 =====
     function toast(msg, err) {
       let t = document.getElementById('br-toast');
@@ -479,7 +603,15 @@
           <div class="br-hl-text">「${escapeHtml(hl.text.substring(0,100))}${hl.text.length>100?'...':''}」</div>
           ${hl.note?`<div class="br-hl-note"><span style="display:inline-flex;vertical-align:middle;margin-right:4px">${svg('pencil',11)}</span>${escapeHtml(hl.note)}</div>`:''}
           <div class="br-hl-meta"><span>${escapeHtml(hl.section||'')}</span><span>${hl.date}</span></div>
-          <div style="text-align:right;margin-top:4px;"><button class="bm-del" title="削除">${svg('trash',14)}</button></div>`;
+          <div class="br-hl-actions"><button class="br-x-share-btn br-hl-x-btn" title="Xでポスト">${xSvg()} ポスト</button><button class="bm-del" title="削除">${svg('trash',14)}</button></div>`;
+        it.querySelector('.br-hl-x-btn').addEventListener('click', e => {
+          e.stopPropagation();
+          const quote = hl.text.length > 80 ? hl.text.substring(0,80)+'…' : hl.text;
+          let txt = `📖「${quote}」`;
+          if (hl.note) txt += `\n💡 ${hl.note}`;
+          txt += `\n\n#Brain学習 #読書メモ`;
+          shareOnX(txt);
+        });
         it.querySelector('.bm-del').addEventListener('click', e => {
           e.stopPropagation();
           unwrapHighlightSpans(hl.id);
@@ -785,6 +917,7 @@
             <div class="br-cal-stat"><div class="br-cal-s-val">${monthSec}</div><div class="br-cal-s-lbl">セクション</div></div>
             <div class="br-cal-stat"><div class="br-cal-s-val">${streak}</div><div class="br-cal-s-lbl">連続日数</div></div>
           </div>
+          ${streak >= 2 ? `<div style="text-align:center;margin-top:6px"><button class="br-x-share-btn" id="br-cal-x-btn">${xSvg()} ${streak}日連続をポスト</button></div>` : ''}
         </div>`;
     }
 
@@ -845,6 +978,18 @@
         calendarView.scope = b.dataset.scope;
         const host = document.getElementById('br-cal-host'); if (host) { host.innerHTML = calendarHTML(); bindCalendar(); }
       }));
+      const xBtn = document.getElementById('br-cal-x-btn');
+      if (xBtn) {
+        xBtn.addEventListener('click', () => {
+          const s = calcStreak();
+          const log = loadGlobalActivity();
+          const now = new Date();
+          const mk = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+          let ms = 0;
+          Object.keys(log).forEach(k => { if (k.startsWith(mk)) { const v = log[k]; ms += v?(typeof v==='number'?v:(v.sections||0)):0; } });
+          shareOnX(`Brain学習 🔥 ${s}日連続中！今月${ms}セクション読了📚 #Brain学習 #継続は力なり`);
+        });
+      }
     }
 
     // ===== エクスポート =====
@@ -1132,6 +1277,7 @@
       if (location.href === currentURL) return;
       currentURL = location.href;
       wasTop = isTopPage();
+      resetAffiliateCache();
       // サイドバーと一時UIをリセット
       setPanelOpen(false);
       hlPop.classList.remove('show');
@@ -1210,6 +1356,7 @@
         setTimeout(startTutorial, 800);
       } else {
         setTimeout(showResumeBanner, 2000);
+        setTimeout(showStreakCelebration, 3000);
       }
       toast('Brain Reader 起動');
     }
