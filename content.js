@@ -981,10 +981,33 @@
         </div>
         <div class="br-sec-title">学習カレンダー</div>
         <div id="br-cal-host">${calendarHTML()}</div>
+        <div class="br-sec-title" style="margin-top:14px">🔗 紹介リンク設定</div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="text" id="br-aff-input" placeholder="紹介URLを貼り付け（brmk.io/...）" value="${escapeHtml(getAffiliateURL()||'')}" style="flex:1;padding:7px 10px;background:#0f0f23;border:1px solid #2d2d4e;border-radius:6px;color:#e0e0e0;font-size:12px;outline:none">
+          <button class="br-btn ghost" id="br-aff-save" style="padding:7px 12px;white-space:nowrap">保存</button>
+        </div>
+        <div style="color:#666;font-size:11px;margin-top:4px">Brainの「紹介URLをコピー」で取得したURLを貼り付けてください。Xシェア時に自動で含まれます。</div>
         <button class="br-btn ghost" id="br-reset-progress" style="margin-top:10px;"><span style="display:inline-flex;vertical-align:middle;margin-right:6px">${svg('refresh',13)}</span>進捗をリセット</button>
         <button class="br-btn danger" id="br-reset-all"><span style="display:inline-flex;vertical-align:middle;margin-right:6px">${svg('trash',13)}</span>全データ削除</button>
       `;
       bindCalendar();
+      document.getElementById('br-aff-save').addEventListener('click', () => {
+        const input = document.getElementById('br-aff-input');
+        const val = (input.value || '').trim();
+        if (val && val.includes('brmk.io')) {
+          _affiliateURL = val;
+          try { localStorage.setItem('br_aff_' + location.pathname, val); } catch(e) {}
+          toast('🔗 紹介リンクを保存しました！');
+        } else if (val) {
+          _affiliateURL = val;
+          try { localStorage.setItem('br_aff_' + location.pathname, val); } catch(e) {}
+          toast('🔗 リンクを保存しました');
+        } else {
+          _affiliateURL = null;
+          try { localStorage.removeItem('br_aff_' + location.pathname); } catch(e) {}
+          toast('リンクをクリアしました');
+        }
+      });
       document.getElementById('br-reset-progress').addEventListener('click', () => {
         ST.readSections = []; ST.lastPosition = 0; saveSt();
         buildTOC(); updateStats(); toast('進捗をリセットしました');
