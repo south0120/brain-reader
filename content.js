@@ -393,41 +393,46 @@
   
     // ===== Xシェア & ストリーク演出 =====
     function xSvg() { return '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>'; }
-    // Brainページからアフィリエイトリンク(brmk.io)を自動検出
-    function detectAffiliateURL() {
-      // 1. ページ内のXシェアボタンのhrefからbrmk.ioリンクを抽出
-      const xLinks = document.querySelectorAll('a[href*="x.com/intent"], a[href*="twitter.com/intent"]');
-      for (const a of xLinks) {
-        const href = a.getAttribute('href') || '';
-        const m = href.match(/url=(https?%3A%2F%2Fbrmk\.io%2F[a-zA-Z0-9]+)/);
-        if (m) return decodeURIComponent(m[1]);
-      }
-      // 2. ページ内のaタグから直接brmk.ioリンクを探す
-      const brmkLinks = document.querySelectorAll('a[href*="brmk.io"]');
-      for (const a of brmkLinks) {
-        const href = a.getAttribute('href') || '';
-        if (/brmk\.io\/[a-zA-Z0-9]+/.test(href)) return href;
-      }
-      // 3. ページ内のonclickやdata属性からbrmk.ioリンクを探す
-      const all = document.body.innerHTML;
-      const brmkMatch = all.match(/https?:\/\/brmk\.io\/[a-zA-Z0-9]+/);
-      if (brmkMatch) return brmkMatch[0];
-      // 見つからなければ現在のページURLを使用
-      return location.href;
-    }
+    // アフィリエイトリンク(brmk.io)の自動傍受
     let _affiliateURL = null;
+    // window.openを傍受して、BrainのXシェアボタンからbrmk.ioリンクをキャプチャ
+    const _origWindowOpen = window.open;
+    window.open = function(url) {
+      if (url && typeof url === 'string' && url.includes('brmk.io')) {
+        const m = url.match(/(?:url=)?(https?(?:%3A%2F%2F|:\/\/)brmk\.io(?:%2F|\/)[\w]+)/i);
+        if (m) {
+          try { _affiliateURL = decodeURIComponent(m[1]); } catch(e) { _affiliateURL = m[1]; }
+          // 記事ごとにlocalStorageにキャッシュ
+          try { localStorage.setItem('br_aff_' + location.pathname, _affiliateURL); } catch(e) {}
+          toast('🔗 アフィリリンクを検出！今後のシェアに自動で含まれます');
+        }
+      }
+      return _origWindowOpen.apply(this, arguments);
+    };
     function getAffiliateURL() {
-      if (!_affiliateURL) _affiliateURL = detectAffiliateURL();
-      return _affiliateURL;
+      // 1. メモリキャッシュ
+      if (_affiliateURL) return _affiliateURL;
+      // 2. localStorageキャッシュ（前回検出分）
+      try {
+        const cached = localStorage.getItem('br_aff_' + location.pathname);
+        if (cached && cached.includes('brmk.io')) { _affiliateURL = cached; return cached; }
+      } catch(e) {}
+      // 3. 見つからない場合null
+      return null;
     }
-    // ルート変更時にリセット
-    const _origOnRoute = typeof onRouteChange === 'function' ? null : null;
     function resetAffiliateCache() { _affiliateURL = null; }
     function shareOnX(text) {
       const affURL = getAffiliateURL();
-      const fullText = text + '\n' + affURL;
-      const url = 'https://x.com/intent/tweet?text=' + encodeURIComponent(fullText);
-      window.open(url, '_blank', 'width=550,height=420');
+      if (affURL) {
+        const fullText = text + '\n' + affURL;
+        const url = 'https://x.com/intent/tweet?text=' + encodeURIComponent(fullText);
+        _origWindowOpen.call(window, url, '_blank', 'width=550,height=420');
+      } else {
+        // アフィリリンク未検出 → 記事URLなしでポスト + ヒント表示
+        const url = 'https://x.com/intent/tweet?text=' + encodeURIComponent(text);
+        _origWindowOpen.call(window, url, '_blank', 'width=550,height=420');
+        toast('💡 Tip: 先にBrainの「Xでシェア」ボタンを1回押すと、アフィリリンクが自動検出されます');
+      }
     }
     function calcStreak() {
       const log = loadGlobalActivity();
