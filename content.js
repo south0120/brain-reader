@@ -462,11 +462,10 @@
       if (affURL) {
         const fullText = text + '\n' + affURL;
         const url = 'https://x.com/intent/tweet?text=' + encodeURIComponent(fullText);
-        _origWindowOpen.call(window, url, '_blank', 'width=550,height=420');
+        window.open(url, '_blank', 'width=550,height=420');
       } else {
-        // アフィリリンク未検出 → 記事URLなしでポスト + ヒント表示
         const url = 'https://x.com/intent/tweet?text=' + encodeURIComponent(text);
-        _origWindowOpen.call(window, url, '_blank', 'width=550,height=420');
+        window.open(url, '_blank', 'width=550,height=420');
         toast('💡 Tip: 先にBrainの「紹介URLをコピー」か「Xでシェア」を1回押すと、アフィリリンクが自動検出されます');
       }
     }
