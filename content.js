@@ -374,6 +374,18 @@
             <div class="br-step"><span class="br-step-num">3</span><div>ペンアイコンを押すと、メモ付きハイライトとして保存できます。</div></div>
             <div class="br-step"><span class="br-step-num">4</span><div><kbd>Alt</kbd>＋ハイライト部分をクリックで個別削除できます。</div></div>
             <div class="br-step"><span class="br-step-num">5</span><div>ハイライトタブの「Markdownでコピー」で全ハイライトを書き出せます。</div></div>
+            <div class="br-step"><span class="br-step-num">6</span><div>各ハイライトの<b>𝕏ポストボタン</b>で、学びをXにシェアできます。紹介リンク付きで投稿されます。</div></div>
+          </div>
+          <div class="br-help-block">
+            <h5>${xSvg()}<span>Xシェア・紹介リンク設定</span></h5>
+            <p>ハイライトのメモや学習カレンダーの連続記録をXにポストできます。紹介リンク（アフィリエイトURL）を設定すると、ポストに自動で含まれます。</p>
+            <div class="br-step"><span class="br-step-num">1</span><div>Brainの記事ページにある<b>「紹介URLをコピー」</b>ボタンをクリック</div></div>
+            <div class="br-step"><span class="br-step-num">2</span><div>下のフィールドに<b>Ctrl+V（⌘+V）で貼り付け</b></div></div>
+            <div class="br-step"><span class="br-step-num">3</span><div>「保存」を押すと、以降のXシェアに自動で紹介リンクが付きます</div></div>
+            <div style="display:flex;gap:6px;align-items:center;margin-top:8px">
+              <input type="text" id="br-aff-input" placeholder="紹介URLを貼り付け（brmk.io/...）" value="${escapeHtml(getAffiliateURL()||'')}" style="flex:1;padding:7px 10px;background:#0f0f23;border:1px solid #2d2d4e;border-radius:6px;color:#e0e0e0;font-size:12px;outline:none">
+              <button class="br-btn ghost" id="br-aff-save" style="padding:7px 12px;white-space:nowrap">保存</button>
+            </div>
           </div>
           <div class="br-help-block">
             <h5>${svg('list',14)}<span>目次・既読管理</span></h5>
@@ -981,33 +993,10 @@
         </div>
         <div class="br-sec-title">学習カレンダー</div>
         <div id="br-cal-host">${calendarHTML()}</div>
-        <div class="br-sec-title" style="margin-top:14px">🔗 紹介リンク設定</div>
-        <div style="display:flex;gap:6px;align-items:center">
-          <input type="text" id="br-aff-input" placeholder="紹介URLを貼り付け（brmk.io/...）" value="${escapeHtml(getAffiliateURL()||'')}" style="flex:1;padding:7px 10px;background:#0f0f23;border:1px solid #2d2d4e;border-radius:6px;color:#e0e0e0;font-size:12px;outline:none">
-          <button class="br-btn ghost" id="br-aff-save" style="padding:7px 12px;white-space:nowrap">保存</button>
-        </div>
-        <div style="color:#666;font-size:11px;margin-top:4px">Brainの「紹介URLをコピー」で取得したURLを貼り付けてください。Xシェア時に自動で含まれます。</div>
         <button class="br-btn ghost" id="br-reset-progress" style="margin-top:10px;"><span style="display:inline-flex;vertical-align:middle;margin-right:6px">${svg('refresh',13)}</span>進捗をリセット</button>
         <button class="br-btn danger" id="br-reset-all"><span style="display:inline-flex;vertical-align:middle;margin-right:6px">${svg('trash',13)}</span>全データ削除</button>
       `;
       bindCalendar();
-      document.getElementById('br-aff-save').addEventListener('click', () => {
-        const input = document.getElementById('br-aff-input');
-        const val = (input.value || '').trim();
-        if (val && val.includes('brmk.io')) {
-          _affiliateURL = val;
-          try { localStorage.setItem('br_aff_' + location.pathname, val); } catch(e) {}
-          toast('🔗 紹介リンクを保存しました！');
-        } else if (val) {
-          _affiliateURL = val;
-          try { localStorage.setItem('br_aff_' + location.pathname, val); } catch(e) {}
-          toast('🔗 リンクを保存しました');
-        } else {
-          _affiliateURL = null;
-          try { localStorage.removeItem('br_aff_' + location.pathname); } catch(e) {}
-          toast('リンクをクリアしました');
-        }
-      });
       document.getElementById('br-reset-progress').addEventListener('click', () => {
         ST.readSections = []; ST.lastPosition = 0; saveSt();
         buildTOC(); updateStats(); toast('進捗をリセットしました');
@@ -1181,6 +1170,23 @@
     });
     document.getElementById('br-cls').addEventListener('click', () => setPanelOpen(false));
     document.getElementById('br-tut-restart').addEventListener('click', () => startTutorial());
+    document.getElementById('br-aff-save').addEventListener('click', () => {
+      const input = document.getElementById('br-aff-input');
+      const val = (input.value || '').trim();
+      if (val && val.includes('brmk.io')) {
+        _affiliateURL = val;
+        try { localStorage.setItem('br_aff_' + location.pathname, val); } catch(e) {}
+        toast('🔗 紹介リンクを保存しました！');
+      } else if (val) {
+        _affiliateURL = val;
+        try { localStorage.setItem('br_aff_' + location.pathname, val); } catch(e) {}
+        toast('🔗 リンクを保存しました');
+      } else {
+        _affiliateURL = null;
+        try { localStorage.removeItem('br_aff_' + location.pathname); } catch(e) {}
+        toast('リンクをクリアしました');
+      }
+    });
 
     // ===== チュートリアル =====
     const TUT_KEY = 'brain_reader_tutorial_done_v1';
