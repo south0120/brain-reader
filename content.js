@@ -393,40 +393,57 @@
   
     // ===== Xシェア & ストリーク演出 =====
     function xSvg() { return '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>'; }
-    // アフィリエイトリンク(brmk.io)の自動傍受（window.open + clipboard の両方をキャッチ）
+    // アフィリエイトリンク(brmk.io)の自動傍受
+    // ページのJS空間にスクリプトを注入して、window.open/clipboard.writeTextを傍受
     let _affiliateURL = null;
-    const _origWindowOpen = window.open;
-    function captureAffiliate(url) {
+    (function injectAffiliateInterceptor() {
+      const script = document.createElement('script');
+      script.textContent = `(function(){
+        // window.open傍受
+        const _wo = window.open;
+        window.open = function(url) {
+          if (url && typeof url === 'string' && url.includes('brmk.io')) {
+            document.dispatchEvent(new CustomEvent('br-affiliate-detected', {detail: url}));
+          }
+          return _wo.apply(this, arguments);
+        };
+        // clipboard.writeText傍受
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          const _cw = navigator.clipboard.writeText.bind(navigator.clipboard);
+          navigator.clipboard.writeText = function(text) {
+            if (text && typeof text === 'string' && text.includes('brmk.io')) {
+              document.dispatchEvent(new CustomEvent('br-affiliate-detected', {detail: text}));
+            }
+            return _cw(text);
+          };
+        }
+        // execCommand('copy')対応: コピーイベント後にクリップボード読み取り
+        document.addEventListener('copy', function() {
+          setTimeout(function() {
+            if (navigator.clipboard && navigator.clipboard.readText) {
+              navigator.clipboard.readText().then(function(text) {
+                if (text && text.includes('brmk.io')) {
+                  document.dispatchEvent(new CustomEvent('br-affiliate-detected', {detail: text}));
+                }
+              }).catch(function(){});
+            }
+          }, 200);
+        });
+      })();`;
+      document.documentElement.appendChild(script);
+      script.remove();
+    })();
+    // content script側でカスタムイベントをリッスン
+    document.addEventListener('br-affiliate-detected', function(e) {
+      const url = e.detail;
       if (!url || typeof url !== 'string') return;
-      const m = url.match(/https?:\/\/brmk\.io\/[\w]+/);
-      const m2 = url.match(/https?%3A%2F%2Fbrmk\.io%2F[\w]+/);
-      let found = m ? m[0] : (m2 ? decodeURIComponent(m2[0]) : null);
-      if (found) {
+      const m = url.match(/https?:\/\/brmk\.io\/[\w]+/) || url.match(/https?%3A%2F%2Fbrmk\.io%2F[\w]+/);
+      if (m) {
+        const found = m[0].includes('%3A') ? decodeURIComponent(m[0]) : m[0];
         _affiliateURL = found;
-        try { localStorage.setItem('br_aff_' + location.pathname, found); } catch(e) {}
+        try { localStorage.setItem('br_aff_' + location.pathname, found); } catch(e2) {}
         toast('🔗 アフィリリンクを検出！今後のシェアに自動で含まれます');
       }
-    }
-    // 1. window.open傍受（Xシェアボタン経由）
-    window.open = function(url) {
-      captureAffiliate(typeof url === 'string' ? url : '');
-      return _origWindowOpen.apply(this, arguments);
-    };
-    // 2. clipboard.writeText傍受（「紹介URLをコピー」ボタン経由）
-    const _origClipWrite = navigator.clipboard && navigator.clipboard.writeText;
-    if (_origClipWrite) {
-      navigator.clipboard.writeText = function(text) {
-        captureAffiliate(text);
-        return _origClipWrite.apply(navigator.clipboard, arguments);
-      };
-    }
-    // 3. 古い方式のexecCommand('copy')も傍受
-    document.addEventListener('copy', () => {
-      setTimeout(() => {
-        if (navigator.clipboard && navigator.clipboard.readText) {
-          navigator.clipboard.readText().then(text => captureAffiliate(text)).catch(() => {});
-        }
-      }, 100);
     });
     function getAffiliateURL() {
       // 1. メモリキャッシュ
