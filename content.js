@@ -992,10 +992,24 @@
         </div>
         <div class="br-sec-title">学習カレンダー</div>
         <div id="br-cal-host">${calendarHTML()}</div>
+        <div style="text-align:center;margin-top:12px"><button class="br-x-share-btn" id="br-stats-x-btn" style="padding:6px 14px;font-size:12px"><span style="display:inline-flex;width:14px;height:14px;vertical-align:middle;margin-right:4px">${xSvg()}</span>学習状況をXで共有する</button></div>
         <button class="br-btn ghost" id="br-reset-progress" style="margin-top:10px;"><span style="display:inline-flex;vertical-align:middle;margin-right:6px">${svg('refresh',13)}</span>進捗をリセット</button>
         <button class="br-btn danger" id="br-reset-all"><span style="display:inline-flex;vertical-align:middle;margin-right:6px">${svg('trash',13)}</span>全データ削除</button>
       `;
       bindCalendar();
+      document.getElementById('br-stats-x-btn').addEventListener('click', () => {
+        const body = getBody();
+        const total = body ? body.querySelectorAll('h2,h3').length : 0;
+        const readCnt = ST.readSections.length;
+        const pct = total ? Math.min(100, Math.round(readCnt/total*100)) : 0;
+        const s = calcStreak();
+        let txt = `📚 Brain学習の進捗報告！\n`;
+        txt += `✅ ${readCnt}/${total}セクション読了（${pct}%）\n`;
+        if (s >= 2) txt += `🔥 ${s}日連続学習中！\n`;
+        txt += `📖 栞${ST.bookmarks.length}件 / ✍️ ハイライト${ST.highlights.length}件\n`;
+        txt += `#Brain学習 #継続は力なり`;
+        shareOnX(txt);
+      });
       document.getElementById('br-reset-progress').addEventListener('click', () => {
         ST.readSections = []; ST.lastPosition = 0; saveSt();
         buildTOC(); updateStats(); toast('進捗をリセットしました');
