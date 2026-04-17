@@ -408,7 +408,7 @@
     // アフィリエイトリンク(brmk.io)の自動傍受
     // ページのJS空間にスクリプトを注入して、window.open/clipboard.writeTextを傍受
     let _affiliateURL = null;
-    (function injectAffiliateInterceptor() {
+    (function injectAffiliateInterceptor() { try {
       const script = document.createElement('script');
       script.textContent = `(function(){
         // window.open傍受
@@ -444,6 +444,7 @@
       })();`;
       document.documentElement.appendChild(script);
       script.remove();
+    } catch(e) { console.warn('Brain Reader: affiliate interceptor failed (CSP?)', e); }
     })();
     // content script側でカスタムイベントをリッスン
     document.addEventListener('br-affiliate-detected', function(e) {
