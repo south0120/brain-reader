@@ -235,6 +235,7 @@
       return 'brain_reader_' + hashKey(id) + '_' + encodeURIComponent(location.pathname).replace(/[^a-zA-Z0-9]/g,'').slice(-24);
     }
     let SK = storageKey();
+    let _affiliateURL = null; // アフィリリンクキャッシュ（パネルHTML生成前に宣言必須）
 
     // ===== ストレージ抽象化（chrome.storage.sync + localStorage フォールバック）=====
     const useSync = !!(typeof chrome !== 'undefined' && chrome.storage && chrome.storage.sync);
@@ -405,9 +406,6 @@
   
     // ===== Xシェア & ストリーク演出 =====
     function xSvg() { return '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>'; }
-    // アフィリエイトリンク(brmk.io)の自動傍受
-    // ページのJS空間にスクリプトを注入して、window.open/clipboard.writeTextを傍受
-    let _affiliateURL = null;
     (function injectAffiliateInterceptor() { try {
       const script = document.createElement('script');
       script.textContent = `(function(){
