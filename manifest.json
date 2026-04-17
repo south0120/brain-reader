@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Brain Reader - 学習アシスト",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Brain記事での学習をサポート。目次・栞・ハイライト・メモ・進捗管理・学習カレンダー・連続学習トラッキング機能付き。",
   "permissions": ["storage", "clipboardWrite"],
   "icons": {
