@@ -378,7 +378,7 @@
             <div class="br-step"><span class="br-step-num">6</span><div>各ハイライトの<b>𝕏ポストボタン</b>で、学びをXにシェアできます。紹介リンク付きで投稿されます。</div></div>
           </div>
           <div class="br-help-block">
-            <h5>${xSvg()}<span>Xシェア・紹介リンク設定</span></h5>
+            <h5><span style="display:inline-flex;width:14px;height:14px;vertical-align:middle;margin-right:6px">${xSvg()}</span><span>Xシェア・紹介リンク設定</span></h5>
             <p>ハイライトのメモや学習カレンダーの連続記録をXにポストできます。紹介リンク（アフィリエイトURL）を設定すると、ポストに自動で含まれます。</p>
             <div class="br-step"><span class="br-step-num">1</span><div>Brainの記事ページにある<b>「紹介URLをコピー」</b>ボタンをクリック</div></div>
             <div class="br-step"><span class="br-step-num">2</span><div>下のフィールドに<b>Ctrl+V（⌘+V）で貼り付け</b></div></div>
