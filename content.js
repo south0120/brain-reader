@@ -1,52 +1,132 @@
-// Brain学習アシスト - content.js
-// brain-market.com の全ページで自動起動
+// Reader 学習アシスト - content.js
+// brain-market.com / tips.jp / (将来 note.com) の全ページで自動起動
+// サイト判定は SITE オブジェクト（下方）で行い、各機能はアダプター越しに DOM/URL を扱う。
 
 (function() {
     'use strict';
-  
+
     // 既に起動済みなら重複防止
     if (document.getElementById('brain-reader-style')) return;
+
+    // ===== サイトアダプター =====
+    // 各サイトの DOM 形状・ストレージ名前空間・テーマ・ブランドを一元化。
+    // 新サイト対応は SITES に1エントリ追加するだけで済むようにしてある。
+    const SITES = {
+      brain: {
+        id: 'brain',
+        brand: 'BrainReader',
+        storagePrefix: 'brain',
+        themeName: 'brain',
+        hashtag: 'Brain学習',
+        supportsAffiliate: true,
+        match: (host) => host === 'brain-market.com' || host.endsWith('.brain-market.com'),
+        getBody: () => document.querySelector('._body_vrp2u_275') || document.querySelector('.body'),
+        // brain は h2/h3/h4 全部使う（既存挙動維持）
+        getHeadings: (body) => body.querySelectorAll('h2,h3,h4'),
+        getTitle: () => document.querySelector('h1')?.innerText
+                     || document.querySelector('meta[property="og:title"]')?.content
+                     || document.title,
+        getCanonicalUrl: () => document.querySelector('link[rel="canonical"]')?.href
+                            || document.querySelector('meta[property="og:url"]')?.content
+                            || location.href,
+        // brain は top/home パスを除外（既存 isTopPage と等価）
+        isArticlePage: () => {
+          const p = location.pathname.replace(/\/+$/,'');
+          return !(p === '' || p === '/top' || p === '/home');
+        },
+      },
+      tips: {
+        id: 'tips',
+        brand: 'TipsReader',
+        storagePrefix: 'tips',
+        themeName: 'tips',
+        hashtag: 'Tips学習',
+        supportsAffiliate: false,
+        match: (host) => host === 'tips.jp' || host.endsWith('.tips.jp'),
+        // tips.jp は SSR で .editer-content が安定して取れる
+        getBody: () => document.querySelector('.editer-content'),
+        // 本文には h2.prs-h2 / h3.prs-h3 のみ。h4 はカード見出し用なので拾わない
+        getHeadings: (body) => body.querySelectorAll('h2.prs-h2, h3.prs-h3'),
+        getTitle: () => document.querySelector('h1')?.innerText
+                     || document.querySelector('meta[property="og:title"]')?.content
+                     || document.title,
+        getCanonicalUrl: () => document.querySelector('link[rel="canonical"]')?.href
+                            || document.querySelector('meta[property="og:url"]')?.content
+                            || location.href,
+        // tips.jp の記事 URL は /u/<author>/a/<slug>
+        isArticlePage: () => /^\/u\/[^/]+\/a\/[^/]+\/?$/.test(location.pathname),
+      },
+      // note: { ... }  // フェーズ2 で追加予定（noteReader）
+    };
+
+    const SITE = (function detect() {
+      const host = location.hostname;
+      for (const k of Object.keys(SITES)) {
+        if (SITES[k].match(host)) return SITES[k];
+      }
+      return null;
+    })();
+
+    // 想定外ホストで manifest matches に引っかかった場合は何もしない。
+    // 通常は manifest matches で抑止されるが、安全側で early return。
+    if (!SITE) return;
+
+    // body にサイト識別属性を立てる（CSS 変数の出し分けに使用）。
+    try { document.documentElement.setAttribute('data-br-site', SITE.themeName); } catch(e) {}
   
     // ===== スタイル注入 =====
     const style = document.createElement('style');
     style.id = 'brain-reader-style';
     const BR_FONT = `"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic Medium","Yu Gothic",YuGothic,Meiryo,-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif`;
     style.textContent = `
+      /* ===== サイト別テーマ変数（[data-br-site] で切替）===== */
+      :root {
+        --theme-accent:var(--theme-accent);          /* メインアクセント（active red） */
+        --theme-accent-2:var(--theme-accent-2);        /* グラデ用セカンダリ（orange） */
+        --theme-accent-bg:var(--theme-accent-bg);       /* 淡い背景 */
+        --theme-accent-border:var(--theme-accent-border);   /* やわらかい縁取り */
+      }
+      [data-br-site="tips"] {
+        --theme-accent:#ff6b1a;          /* tips のオレンジ寄りアクセント */
+        --theme-accent-2:#ff8c42;        /* tips spec 配色 */
+        --theme-accent-bg:#fff5e6;       /* tips spec 生成色 */
+        --theme-accent-border:#ffd5a3;   /* オレンジ寄り縁取り */
+      }
       #brain-reader-panel,#brain-reader-toggle,#br-highlight-popup,#br-note-modal,#br-resume,#br-toast,#br-tutorial{font-family:${BR_FONT}}
       #brain-reader-panel,#brain-reader-panel *,#br-highlight-popup,#br-highlight-popup *,#br-note-modal,#br-note-modal *,#br-resume,#br-resume *,#br-tutorial,#br-tutorial *{counter-reset:none!important;counter-increment:none!important}
       #brain-reader-panel h1::before,#brain-reader-panel h2::before,#brain-reader-panel h3::before,#brain-reader-panel h4::before,#brain-reader-panel h5::before,#brain-reader-panel h6::before,#brain-reader-panel h1::after,#brain-reader-panel h2::after,#brain-reader-panel h3::after,#brain-reader-panel h4::after,#brain-reader-panel h5::after,#brain-reader-panel h6::after,#brain-reader-panel p::before,#brain-reader-panel p::after,#brain-reader-panel div::before,#brain-reader-panel div::after,#br-resume *::before,#br-resume *::after,#br-tutorial *::before,#br-tutorial *::after{content:none!important;counter-increment:none!important}
       #brain-reader-panel{position:fixed;top:0;right:0;width:320px;height:100vh;background:#ffffff;color:#1f2937;z-index:999999;display:flex;flex-direction:column;box-shadow:-4px 0 24px rgba(15,23,42,.12);font-size:13px;transform:translateX(100%);transition:transform .3s ease;border-left:1px solid #e5e7eb}
       #brain-reader-panel.open{transform:translateX(0)}
-      #brain-reader-toggle{position:fixed;top:50%;right:0;transform:translateY(-50%);background:linear-gradient(135deg,#ff6b35,#ef4444);color:white;border:none;padding:12px 10px;cursor:pointer;z-index:1000000;border-radius:10px 0 0 10px;box-shadow:-2px 0 10px rgba(239,68,68,.3);display:flex;align-items:center;justify-content:center}
+      #brain-reader-toggle{position:fixed;top:50%;right:0;transform:translateY(-50%);background:linear-gradient(135deg,var(--theme-accent-2),var(--theme-accent));color:white;border:none;padding:12px 10px;cursor:pointer;z-index:1000000;border-radius:10px 0 0 10px;box-shadow:-2px 0 10px rgba(239,68,68,.3);display:flex;align-items:center;justify-content:center}
       #brain-reader-toggle{transition:transform .3s ease,opacity .3s ease}
       #brain-reader-toggle:hover{filter:brightness(1.05)}
       #brain-reader-toggle.br-hidden{transform:translateY(-50%) translateX(120%);opacity:0;pointer-events:none}
       #brain-reader-toggle.br-disabled{opacity:.4;cursor:not-allowed;filter:grayscale(.3)}
       #brain-reader-toggle.br-disabled:hover{filter:grayscale(.3)}
       #brain-reader-header{padding:14px 16px;background:#ffffff;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f1f1f1}
-      #brain-reader-header .br-title{margin:0;font-size:13px;color:#ef4444;font-weight:700;letter-spacing:.5px;display:flex;align-items:center;gap:7px}
-      #brain-reader-header .br-title svg{stroke:#ef4444}
+      #brain-reader-header .br-title{margin:0;font-size:13px;color:var(--theme-accent);font-weight:700;letter-spacing:.5px;display:flex;align-items:center;gap:7px}
+      #brain-reader-header .br-title svg{stroke:var(--theme-accent)}
       #brain-reader-header .br-title::before,#brain-reader-header .br-title::after{content:none!important;display:none!important}
       #brain-reader-header .br-h-actions{display:flex;gap:4px;align-items:center}
       #brain-reader-header .br-h-actions button{background:none;border:none;cursor:pointer;color:#9ca3af;padding:5px;border-radius:6px;display:flex;align-items:center;justify-content:center}
-      #brain-reader-header .br-h-actions button:hover{color:#ef4444;background:#fff5f3}
+      #brain-reader-header .br-h-actions button:hover{color:var(--theme-accent);background:var(--theme-accent-bg)}
       #brain-reader-tabs{display:flex;background:#fafafa;border-bottom:1px solid #f1f1f1}
       .br-tab{flex:1;padding:12px 4px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#9ca3af;border:none;background:none;border-bottom:2px solid transparent;transition:all .2s;font-family:inherit}
       .br-tab svg{stroke-width:1.8}
-      .br-tab:hover{color:#ef4444;background:rgba(239,68,68,.04)}
-      .br-tab.active{color:#ef4444;border-bottom-color:#ef4444;background:white}
+      .br-tab:hover{color:var(--theme-accent);background:rgba(239,68,68,.04)}
+      .br-tab.active{color:var(--theme-accent);border-bottom-color:var(--theme-accent);background:white}
       #brain-reader-content{flex:1;overflow-y:auto;padding:12px;background:#ffffff}
       #brain-reader-content::-webkit-scrollbar{width:6px}
       #brain-reader-content::-webkit-scrollbar-thumb{background:#e5e7eb;border-radius:3px}
       #brain-reader-content::-webkit-scrollbar-thumb:hover{background:#d1d5db}
       .br-section{display:none}
       .br-section.active{display:block}
-      #brain-progress-bar{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,#ff6b35,#ef4444);z-index:999998;transition:width .3s;pointer-events:none;box-shadow:0 1px 4px rgba(239,68,68,.3)}
+      #brain-progress-bar{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--theme-accent-2),var(--theme-accent));z-index:999998;transition:width .3s;pointer-events:none;box-shadow:0 1px 4px rgba(239,68,68,.3)}
       .br-heading-actions{display:inline-flex;gap:3px;margin-left:8px;opacity:0;transition:opacity .2s;vertical-align:middle}
       h2:hover .br-heading-actions,h3:hover .br-heading-actions,h4:hover .br-heading-actions,.br-heading-actions.br-show{opacity:1}
-      .br-btn-bm{background:linear-gradient(135deg,#ff8a3d,#ff6b35);color:white;border:none;border-radius:6px;padding:4px 7px;cursor:pointer;box-shadow:0 1px 3px rgba(255,107,53,.3);font-family:inherit;display:inline-flex;align-items:center;justify-content:center}
+      .br-btn-bm{background:linear-gradient(135deg,#ff8a3d,var(--theme-accent-2));color:white;border:none;border-radius:6px;padding:4px 7px;cursor:pointer;box-shadow:0 1px 3px rgba(255,107,53,.3);font-family:inherit;display:inline-flex;align-items:center;justify-content:center}
       .br-btn-bm:hover{filter:brightness(1.05)}
-      .br-btn-bm.active{background:linear-gradient(135deg,#ef4444,#dc2626)}
+      .br-btn-bm.active{background:linear-gradient(135deg,var(--theme-accent),#dc2626)}
       .br-highlight{border-radius:2px;cursor:pointer;padding:1px 0}
       .br-highlight-yellow{background:rgba(252,211,77,.5)}
       .br-highlight-green{background:rgba(110,231,183,.5)}
@@ -55,55 +135,55 @@
       #br-highlight-popup{position:absolute;background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;padding:8px 10px;z-index:1000001;display:none;gap:8px;align-items:center;box-shadow:0 8px 24px rgba(15,23,42,.15)}
       #br-highlight-popup.show{display:flex}
       .br-color-btn{width:24px;height:24px;border-radius:50%;border:2px solid #fff;cursor:pointer;transition:transform .15s;box-shadow:0 0 0 1px #e5e7eb}
-      .br-color-btn:hover{transform:scale(1.15);box-shadow:0 0 0 2px #ef4444}
+      .br-color-btn:hover{transform:scale(1.15);box-shadow:0 0 0 2px var(--theme-accent)}
       .br-color-btn.yellow{background:#fbbf24}.br-color-btn.green{background:#34d399}.br-color-btn.red{background:#f87171}.br-color-btn.blue{background:#60a5fa}
-      #br-add-note-btn{background:linear-gradient(135deg,#ff6b35,#ef4444);color:white;border:none;border-radius:6px;padding:5px 8px;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;justify-content:center}
+      #br-add-note-btn{background:linear-gradient(135deg,var(--theme-accent-2),var(--theme-accent));color:white;border:none;border-radius:6px;padding:5px 8px;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;justify-content:center}
       .br-toc-item{padding:6px 8px;cursor:pointer;border-radius:5px;color:#374151;line-height:1.4;display:flex;align-items:center;gap:6px;transition:all .15s}
-      .br-toc-item:hover{background:#fff5f3;color:#ef4444}
+      .br-toc-item:hover{background:var(--theme-accent-bg);color:var(--theme-accent)}
       .br-toc-item.h2{font-size:12px;font-weight:600;color:#1f2937}
       .br-toc-item.h3{font-size:11px;padding-left:20px;color:#4b5563}
       .br-toc-item.h4{font-size:11px;padding-left:32px;color:#6b7280}
       .br-check{flex-shrink:0;width:13px;height:13px;display:inline-flex;align-items:center;justify-content:center;color:#d1d5db}
       .br-check svg{stroke:#10b981}
       .br-dot-mark{color:#d1d5db;font-weight:700}
-      .br-toc-item.active{background:#fff5f3;color:#ef4444;font-weight:600}
-      .br-toc-item.active .br-toc-txt{color:#ef4444}
-      .br-bm-dot{width:7px;height:7px;background:#ff6b35;border-radius:50%;flex-shrink:0;box-shadow:0 0 0 2px rgba(255,107,53,.2)}
-      .br-bookmark-item{padding:10px 12px;background:#fafafa;border-radius:8px;margin-bottom:7px;cursor:pointer;border-left:3px solid #ff6b35;transition:all .2s;border:1px solid #f1f1f1;border-left-width:3px}
-      .br-bookmark-item:hover{background:#fff5f3;border-color:#fed7aa;border-left-color:#ef4444}
+      .br-toc-item.active{background:var(--theme-accent-bg);color:var(--theme-accent);font-weight:600}
+      .br-toc-item.active .br-toc-txt{color:var(--theme-accent)}
+      .br-bm-dot{width:7px;height:7px;background:var(--theme-accent-2);border-radius:50%;flex-shrink:0;box-shadow:0 0 0 2px rgba(255,107,53,.2)}
+      .br-bookmark-item{padding:10px 12px;background:#fafafa;border-radius:8px;margin-bottom:7px;cursor:pointer;border-left:3px solid var(--theme-accent-2);transition:all .2s;border:1px solid #f1f1f1;border-left-width:3px}
+      .br-bookmark-item:hover{background:var(--theme-accent-bg);border-color:var(--theme-accent-border);border-left-color:var(--theme-accent)}
       .bm-title{font-size:12px;color:#1f2937;margin-bottom:4px;line-height:1.4;font-weight:500}
       .bm-meta{font-size:10px;color:#9ca3af;display:flex;justify-content:space-between;align-items:center}
       .bm-del{background:none;border:none;color:#9ca3af;cursor:pointer;font-size:13px;padding:2px 4px;border-radius:4px}
-      .bm-del:hover{color:#ef4444;background:#fef2f2}
+      .bm-del:hover{color:var(--theme-accent);background:#fef2f2}
       .br-hl-item{padding:10px 12px;background:#fafafa;border-radius:8px;margin-bottom:7px;border-left:3px solid #fbbf24;border:1px solid #f1f1f1;border-left-width:3px;cursor:pointer;transition:background .2s}
-      .br-hl-item:hover{background:#fff5f3}
+      .br-hl-item:hover{background:var(--theme-accent-bg)}
       .br-hl-text{font-size:12px;color:#1f2937;margin-bottom:4px;line-height:1.5}
-      .br-hl-note{font-size:11px;color:#ef4444;margin-top:5px;padding-top:5px;border-top:1px dashed #e5e7eb;font-weight:500}
+      .br-hl-note{font-size:11px;color:var(--theme-accent);margin-top:5px;padding-top:5px;border-top:1px dashed #e5e7eb;font-weight:500}
       .br-hl-meta{font-size:10px;color:#9ca3af;display:flex;justify-content:space-between;align-items:center;margin-top:4px}
       .br-stat-card{background:#fafafa;border:1px solid #f1f1f1;border-radius:8px;padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
-      .br-stat-val{font-size:22px;font-weight:700;color:#ef4444;line-height:1}
+      .br-stat-val{font-size:22px;font-weight:700;color:var(--theme-accent);line-height:1}
       .br-stat-lbl{font-size:11px;color:#6b7280;font-weight:500}
       .br-stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px}
       .br-stat-grid .br-stat-card{margin:0;padding:10px 12px;flex-direction:column;align-items:flex-start;gap:4px}
       .br-stat-grid .br-stat-val{font-size:20px}
-      .br-progress-box{background:#fff5f3;border:1px solid #fed7aa;border-radius:10px;padding:12px 14px;margin-bottom:10px}
+      .br-progress-box{background:var(--theme-accent-bg);border:1px solid var(--theme-accent-border);border-radius:10px;padding:12px 14px;margin-bottom:10px}
       .br-progress-lbl{font-size:11px;color:#9ca3af;font-weight:600;letter-spacing:.5px;margin-bottom:7px}
       .br-progress-track{background:#ffe4d6;border-radius:6px;height:8px;overflow:hidden;margin-bottom:6px}
-      .br-progress-fill{background:linear-gradient(90deg,#ff6b35,#ef4444);height:100%;transition:width .4s ease;border-radius:6px}
-      .br-progress-pct{font-size:13px;color:#ef4444;text-align:right;font-weight:700}
+      .br-progress-fill{background:linear-gradient(90deg,var(--theme-accent-2),var(--theme-accent));height:100%;transition:width .4s ease;border-radius:6px}
+      .br-progress-pct{font-size:13px;color:var(--theme-accent);text-align:right;font-weight:700}
       /* カレンダー */
       .br-cal-wrap{background:#fafafa;border:1px solid #f1f1f1;border-radius:10px;padding:10px;margin-bottom:10px}
       .br-cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
       .br-cal-title{font-size:12px;font-weight:700;color:#1f2937}
       .br-cal-nav{background:#fff;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;color:#6b7280;padding:4px 6px;display:flex;align-items:center}
-      .br-cal-nav:hover{color:#ef4444;border-color:#fed7aa;background:#fff5f3}
+      .br-cal-nav:hover{color:var(--theme-accent);border-color:var(--theme-accent-border);background:var(--theme-accent-bg)}
       .br-cal-scope{display:flex;gap:4px;margin-bottom:8px;background:#fff;border-radius:6px;padding:2px;border:1px solid #f1f1f1}
       .br-cal-scope-btn{flex:1;border:none;background:none;padding:5px;font-size:10px;color:#9ca3af;cursor:pointer;border-radius:4px;font-family:inherit;font-weight:500}
-      .br-cal-scope-btn:hover{color:#ef4444}
-      .br-cal-scope-btn.active{background:linear-gradient(135deg,#ff6b35,#ef4444);color:#fff}
+      .br-cal-scope-btn:hover{color:var(--theme-accent)}
+      .br-cal-scope-btn.active{background:linear-gradient(135deg,var(--theme-accent-2),var(--theme-accent));color:#fff}
       .br-cal-grid-head{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px}
       .br-cal-grid-head span{text-align:center;font-size:10px;color:#9ca3af;font-weight:600}
-      .br-cal-grid-head span:first-child{color:#ef4444}
+      .br-cal-grid-head span:first-child{color:var(--theme-accent)}
       .br-cal-grid-head span:last-child{color:#60a5fa}
       .br-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
       .br-cal-cell{aspect-ratio:1/1;border-radius:5px;background:#fff;border:1px solid #f1f1f1;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;cursor:default;min-height:32px}
@@ -114,10 +194,10 @@
       .br-cal-cell.br-cal-i1{background:#ffe8dc;border-color:#ffd5be}
       .br-cal-cell.br-cal-i2{background:#ffb791;border-color:#ff9a6a}
       .br-cal-cell.br-cal-i3{background:#ff8c5a;border-color:#ff7a42}
-      .br-cal-cell.br-cal-i4{background:linear-gradient(135deg,#ff6b35,#ef4444);border-color:#ef4444}
+      .br-cal-cell.br-cal-i4{background:linear-gradient(135deg,var(--theme-accent-2),var(--theme-accent));border-color:var(--theme-accent)}
       .br-cal-cell.br-cal-i1 .br-cal-d,.br-cal-cell.br-cal-i2 .br-cal-d{color:#1f2937}
       .br-cal-cell.br-cal-i3 .br-cal-d,.br-cal-cell.br-cal-i4 .br-cal-d{color:#fff}
-      .br-cal-cell.br-cal-i1 .br-cal-n{color:#ef4444}
+      .br-cal-cell.br-cal-i1 .br-cal-n{color:var(--theme-accent)}
       .br-cal-cell.br-cal-i2 .br-cal-n{color:#7c2d12}
       .br-cal-cell.br-cal-today{outline:2px solid #1f2937;outline-offset:-1px}
       .br-cal-summary{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:10px}
@@ -133,68 +213,68 @@
       .br-streak-share{margin-top:12px}
       .br-hl-actions{display:flex;align-items:center;justify-content:flex-end;gap:4px;margin-top:4px}
       .br-cal-stat{background:#fff;border:1px solid #f1f1f1;border-radius:6px;padding:6px 8px;text-align:center}
-      .br-cal-s-val{font-size:16px;font-weight:700;color:#ef4444;line-height:1}
+      .br-cal-s-val{font-size:16px;font-weight:700;color:var(--theme-accent);line-height:1}
       .br-cal-s-lbl{font-size:10px;color:#6b7280;margin-top:2px}
-      .br-btn{background:linear-gradient(135deg,#ff6b35,#ef4444);color:white;border:none;border-radius:6px;padding:9px 12px;cursor:pointer;font-size:12px;width:100%;margin-bottom:7px;font-family:inherit;font-weight:500;box-shadow:0 1px 3px rgba(239,68,68,.2)}
+      .br-btn{background:linear-gradient(135deg,var(--theme-accent-2),var(--theme-accent));color:white;border:none;border-radius:6px;padding:9px 12px;cursor:pointer;font-size:12px;width:100%;margin-bottom:7px;font-family:inherit;font-weight:500;box-shadow:0 1px 3px rgba(239,68,68,.2)}
       .br-btn:hover{filter:brightness(1.05)}
       .br-btn.danger{background:#fff;color:#dc2626;border:1px solid #fca5a5;box-shadow:none}
       .br-btn.danger:hover{background:#fef2f2}
       .br-btn.ghost{background:#fff;color:#6b7280;border:1px solid #e5e7eb;box-shadow:none}
-      .br-btn.ghost:hover{background:#fafafa;color:#ef4444;border-color:#fed7aa}
+      .br-btn.ghost:hover{background:#fafafa;color:var(--theme-accent);border-color:var(--theme-accent-border)}
       #br-note-modal{display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:1000002;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
       #br-note-modal.show{display:flex}
       #br-note-inner{background:#fff;border-radius:14px;padding:22px;width:420px;max-width:90vw;box-shadow:0 20px 60px rgba(15,23,42,.25)}
-      #br-note-inner h4{margin:0 0 12px;color:#ef4444;font-size:15px;font-weight:700}
+      #br-note-inner h4{margin:0 0 12px;color:var(--theme-accent);font-size:15px;font-weight:700}
       #br-note-sel{background:#fff8f5;border-radius:6px;padding:10px;font-size:12px;color:#4b5563;margin-bottom:12px;max-height:80px;overflow-y:auto;border-left:3px solid #fbbf24;line-height:1.5}
       #br-note-ta{width:100%;background:#fff;border:1px solid #e5e7eb;border-radius:8px;color:#1f2937;padding:11px;font-size:13px;resize:vertical;min-height:100px;box-sizing:border-box;font-family:inherit;line-height:1.5}
-      #br-note-ta:focus{outline:none;border-color:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.1)}
+      #br-note-ta:focus{outline:none;border-color:var(--theme-accent);box-shadow:0 0 0 3px rgba(239,68,68,.1)}
       .br-modal-btns{display:flex;gap:8px;margin-top:14px;justify-content:flex-end}
       .br-modal-btns button{border:none;border-radius:6px;padding:8px 18px;cursor:pointer;font-size:12px;font-family:inherit;font-weight:500}
-      #br-note-save{background:linear-gradient(135deg,#ff6b35,#ef4444);color:white}
+      #br-note-save{background:linear-gradient(135deg,var(--theme-accent-2),var(--theme-accent));color:white}
       #br-note-cancel{background:#f3f4f6;color:#4b5563}
       .br-search-wrap{position:relative;margin-bottom:10px}
       .br-search-ico{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:#9ca3af;pointer-events:none;display:flex}
       #br-search{width:100%;background:#fff;border:1px solid #e5e7eb;border-radius:6px;color:#1f2937;padding:8px 11px 8px 30px;font-size:12px;box-sizing:border-box;font-family:inherit}
-      #br-search:focus{outline:none;border-color:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.1)}
+      #br-search:focus{outline:none;border-color:var(--theme-accent);box-shadow:0 0 0 3px rgba(239,68,68,.1)}
       .br-empty{text-align:center;color:#9ca3af;font-size:12px;padding:24px 12px;line-height:1.7;background:#fafafa;border-radius:8px;border:1px dashed #e5e7eb}
-      .br-empty b{color:#ef4444}
+      .br-empty b{color:var(--theme-accent)}
       .br-sec-title{font-size:10px;color:#9ca3af;margin:10px 0 6px;text-transform:uppercase;letter-spacing:1.5px;font-weight:600}
-      #br-resume{position:fixed!important;top:50%!important;right:48px!important;left:auto!important;bottom:auto!important;transform:translateY(-50%) translateX(0)!important;background:#fff;border:1px solid #fed7aa;border-radius:10px 0 0 10px;padding:10px 12px;z-index:999997;display:flex;gap:10px;align-items:center;box-shadow:-4px 4px 16px rgba(239,68,68,.18);max-width:260px;animation:brFadeR .3s ease}
+      #br-resume{position:fixed!important;top:50%!important;right:48px!important;left:auto!important;bottom:auto!important;transform:translateY(-50%) translateX(0)!important;background:#fff;border:1px solid var(--theme-accent-border);border-radius:10px 0 0 10px;padding:10px 12px;z-index:999997;display:flex;gap:10px;align-items:center;box-shadow:-4px 4px 16px rgba(239,68,68,.18);max-width:260px;animation:brFadeR .3s ease}
       @keyframes brFadeR{from{opacity:0;transform:translateY(-50%) translateX(20px)}to{opacity:1;transform:translateY(-50%) translateX(0)}}
       #br-resume.br-hidden-by-panel{display:none}
       .br-resume-body{flex:1;min-width:0}
       .br-resume-text{font-size:10px;color:#9ca3af;line-height:1.2}
       .br-resume-title{font-size:12px;color:#1f2937;margin-top:2px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px}
-      #br-resume-go{background:linear-gradient(135deg,#ff6b35,#ef4444);color:white;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:11px;white-space:nowrap;font-family:inherit;font-weight:500;display:flex;align-items:center;gap:4px}
+      #br-resume-go{background:linear-gradient(135deg,var(--theme-accent-2),var(--theme-accent));color:white;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:11px;white-space:nowrap;font-family:inherit;font-weight:500;display:flex;align-items:center;gap:4px}
       #br-resume-x{background:none;border:none;color:#9ca3af;cursor:pointer;padding:2px;display:flex;align-items:center}
-      #br-resume-x:hover{color:#ef4444}
+      #br-resume-x:hover{color:var(--theme-accent)}
       /* チュートリアル */
       #br-tutorial{position:fixed;inset:0;z-index:1000005;display:none;pointer-events:none}
       #br-tutorial.show{display:block}
       #br-tutorial-mask{position:absolute;inset:0;background:rgba(15,23,42,.55);pointer-events:auto;backdrop-filter:blur(1px)}
-      #br-tutorial-card{position:absolute;background:#fff;border-radius:14px;padding:20px 22px;width:360px;max-width:92vw;box-shadow:0 20px 60px rgba(15,23,42,.4);pointer-events:auto;border-top:4px solid #ef4444}
-      #br-tutorial-card h4{margin:0 0 8px;color:#ef4444;font-size:16px;font-weight:700}
+      #br-tutorial-card{position:absolute;background:#fff;border-radius:14px;padding:20px 22px;width:360px;max-width:92vw;box-shadow:0 20px 60px rgba(15,23,42,.4);pointer-events:auto;border-top:4px solid var(--theme-accent)}
+      #br-tutorial-card h4{margin:0 0 8px;color:var(--theme-accent);font-size:16px;font-weight:700}
       #br-tutorial-step{font-size:11px;color:#9ca3af;font-weight:600;letter-spacing:1px;margin-bottom:4px}
       #br-tutorial-body{font-size:13px;color:#374151;line-height:1.7;margin-bottom:14px}
-      #br-tutorial-body kbd{background:#fff5f3;border:1px solid #fed7aa;border-radius:4px;padding:1px 6px;font-size:11px;color:#ef4444;font-family:inherit}
-      #br-tutorial-body .br-tip{background:#fff8f5;border-left:3px solid #ff6b35;padding:8px 10px;border-radius:4px;margin-top:8px;font-size:12px;color:#6b7280}
+      #br-tutorial-body kbd{background:var(--theme-accent-bg);border:1px solid var(--theme-accent-border);border-radius:4px;padding:1px 6px;font-size:11px;color:var(--theme-accent);font-family:inherit}
+      #br-tutorial-body .br-tip{background:#fff8f5;border-left:3px solid var(--theme-accent-2);padding:8px 10px;border-radius:4px;margin-top:8px;font-size:12px;color:#6b7280}
       .br-tut-btns{display:flex;justify-content:space-between;align-items:center;gap:8px}
       .br-tut-btns .br-tut-skip{background:none;border:none;color:#9ca3af;cursor:pointer;font-size:11px;font-family:inherit}
-      .br-tut-btns .br-tut-skip:hover{color:#ef4444}
+      .br-tut-btns .br-tut-skip:hover{color:var(--theme-accent)}
       .br-tut-nav{display:flex;gap:8px}
       .br-tut-nav button{border:none;border-radius:6px;padding:7px 16px;cursor:pointer;font-size:12px;font-family:inherit;font-weight:500}
       .br-tut-prev{background:#f3f4f6;color:#4b5563}
-      .br-tut-next{background:linear-gradient(135deg,#ff6b35,#ef4444);color:white}
-      #br-tutorial-spot{position:absolute;border:3px solid #ff6b35;border-radius:8px;box-shadow:0 0 0 9999px rgba(15,23,42,.55),0 0 24px rgba(239,68,68,.5);pointer-events:none;transition:all .3s ease;display:none}
+      .br-tut-next{background:linear-gradient(135deg,var(--theme-accent-2),var(--theme-accent));color:white}
+      #br-tutorial-spot{position:absolute;border:3px solid var(--theme-accent-2);border-radius:8px;box-shadow:0 0 0 9999px rgba(15,23,42,.55),0 0 24px rgba(239,68,68,.5);pointer-events:none;transition:all .3s ease;display:none}
       #br-tutorial-spot.show{display:block}
       /* ヘルプタブ */
       .br-help-block{background:#fafafa;border:1px solid #f1f1f1;border-radius:8px;padding:12px 14px;margin-bottom:10px}
-      .br-help-block h5{margin:0 0 8px;color:#ef4444;font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px}
-      .br-help-block h5 svg{stroke:#ef4444}
+      .br-help-block h5{margin:0 0 8px;color:var(--theme-accent);font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px}
+      .br-help-block h5 svg{stroke:var(--theme-accent)}
       .br-help-block p{margin:4px 0;font-size:12px;color:#4b5563;line-height:1.7}
-      .br-help-block kbd{background:#fff5f3;border:1px solid #fed7aa;border-radius:4px;padding:1px 6px;font-size:11px;color:#ef4444}
+      .br-help-block kbd{background:var(--theme-accent-bg);border:1px solid var(--theme-accent-border);border-radius:4px;padding:1px 6px;font-size:11px;color:var(--theme-accent)}
       .br-help-block .br-step{display:flex;gap:8px;align-items:flex-start;margin:6px 0}
-      .br-help-block .br-step-num{background:#ef4444;color:#fff;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+      .br-help-block .br-step-num{background:var(--theme-accent);color:#fff;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
     `;
     document.head.appendChild(style);
 
@@ -225,15 +305,113 @@
     }
 
     // ===== ストレージ =====
+    // hashKey: 既存 v1.2.0 と完全互換。マイグレーションで「単純リネーム」が成り立つよう不変。
     function hashKey(s) {
       let h = 5381 >>> 0;
       for (let i = 0; i < s.length; i++) h = (((h << 5) + h) + s.charCodeAt(i)) >>> 0;
       return h.toString(36);
     }
+    // 記事別キーは reader_<site>_<hash>_<path-suffix>。<hash> と <path-suffix> は v1.2.0 と同じ算出。
     function storageKey() {
       const id = location.pathname + location.search;
-      return 'brain_reader_' + hashKey(id) + '_' + encodeURIComponent(location.pathname).replace(/[^a-zA-Z0-9]/g,'').slice(-24);
+      return 'reader_' + SITE.storagePrefix + '_' + hashKey(id) + '_'
+        + encodeURIComponent(location.pathname).replace(/[^a-zA-Z0-9]/g,'').slice(-24);
     }
+    // 全サイト横断のメタ用キー（learningDays / brainAffiliateLinks / tutorialDoneV1 を保持）
+    const META_KEY = 'reader_meta';
+    // マイグレーション完了マーカー（旧 brain_reader_* / br_aff_* / activity_global → 新スキーマに移行済み）
+    const MIGRATION_MARKER = 'reader_migration_v2_done';
+
+    // ----- マイグレーション v1.2.0 → v1.3.0 -----
+    // 走査対象キー：
+    //   brain_reader_<hash>_<path>       → reader_brain_<hash>_<path>           （新形式・rename）
+    //   brain_reader_<b64>               → reader_brain_legacy_<b64>            （旧形式・rename）
+    //   brain_reader_tutorial_done_v1    → reader_meta.tutorialDoneV1            （横断メタへ）
+    //   brain_reader_activity_global     → reader_meta.learningDays              （横断メタへ）
+    //   br_aff_<path>                    → reader_meta.brainAffiliateLinks[<path>]（横断メタへ・brain 固有）
+    function runMigrationV2() {
+      try {
+        if (localStorage.getItem(MIGRATION_MARKER) === '1') return;
+      } catch(e) { return; }
+
+      // 既存の reader_meta があれば取得、なければ空で開始（既に移行途中の状態にも安全）
+      let meta;
+      try { meta = JSON.parse(localStorage.getItem(META_KEY) || '{}') || {}; } catch(e) { meta = {}; }
+      meta.learningDays = meta.learningDays || {};
+      meta.brainAffiliateLinks = meta.brainAffiliateLinks || {};
+
+      // localStorage は走査中に削除すると index がずれるので、まずキー一覧を確定させる
+      let allKeys = [];
+      try {
+        for (let i = 0; i < localStorage.length; i++) allKeys.push(localStorage.key(i));
+      } catch(e) {}
+
+      const renamed = []; // [oldKey, newKey] の組（実体移送が成功したものだけ削除する）
+
+      for (const k of allKeys) {
+        if (!k) continue;
+        try {
+          if (k === 'brain_reader_tutorial_done_v1') {
+            meta.tutorialDoneV1 = localStorage.getItem(k) || '1';
+            renamed.push([k, null]);
+            continue;
+          }
+          if (k === 'brain_reader_activity_global') {
+            const val = JSON.parse(localStorage.getItem(k) || '{}') || {};
+            // 既存 reader_meta.learningDays とマージ（同日付は sections が大きい方を採用）
+            Object.keys(val).forEach(dk => {
+              const r = val[dk], l = meta.learningDays[dk];
+              if (!l) { meta.learningDays[dk] = r; }
+              else if (r && (r.sections || 0) > (l.sections || 0)) { meta.learningDays[dk] = r; }
+            });
+            renamed.push([k, null]);
+            continue;
+          }
+          if (k.startsWith('br_aff_')) {
+            const path = k.slice('br_aff_'.length); // 例: '/u/ikehaya/a/...'
+            const v = localStorage.getItem(k);
+            if (v && v.includes('brmk.io')) meta.brainAffiliateLinks[path] = v;
+            renamed.push([k, null]);
+            continue;
+          }
+          if (k.startsWith('brain_reader_')) {
+            const suffix = k.slice('brain_reader_'.length);
+            // 新形式: <hash>_<path-suffix>（_ で分割可能）
+            // 旧形式: <b64-20chars>（_ を含まない）
+            const isNewFormat = suffix.includes('_');
+            const newKey = isNewFormat
+              ? 'reader_brain_' + suffix
+              : 'reader_brain_legacy_' + suffix;
+            const val = localStorage.getItem(k);
+            if (val !== null) localStorage.setItem(newKey, val);
+            renamed.push([k, newKey]);
+            continue;
+          }
+        } catch(e) {
+          // 個別の失敗で全体を止めない
+        }
+      }
+
+      // メタ書き込み → 旧キー削除 の順で実施（途中で落ちてもデータは残る）
+      try { localStorage.setItem(META_KEY, JSON.stringify(meta)); } catch(e) {}
+      for (const [oldKey] of renamed) {
+        try { localStorage.removeItem(oldKey); } catch(e) {}
+      }
+      try { localStorage.setItem(MIGRATION_MARKER, '1'); } catch(e) {}
+    }
+    runMigrationV2();
+
+    // メタ操作ヘルパー
+    function loadMeta() {
+      try { return JSON.parse(localStorage.getItem(META_KEY) || '{}') || {}; }
+      catch(e) { return {}; }
+    }
+    function saveMeta(m) {
+      try { localStorage.setItem(META_KEY, JSON.stringify(m)); } catch(e) {}
+      // chrome.storage.sync には reader_meta をまるごと同期（容量は数 KB 程度で収まる想定）
+      if (useSync) { try { chrome.storage.sync.set({ [META_KEY]: m }); } catch(e) {} }
+    }
+
     let SK = storageKey();
     let _affiliateURL = null; // アフィリリンクキャッシュ（パネルHTML生成前に宣言必須）
 
@@ -246,41 +424,50 @@
     }
     function saveSt() {
       try{localStorage.setItem(SK,JSON.stringify(ST));}catch(e){}
-      // chrome.storage.sync にアクティビティログを同期（容量制限対策: ログのみsync）
+      // chrome.storage.sync には reader_meta（学習履歴を含む横断メタ）を同期
       if (useSync) {
         try {
-          chrome.storage.sync.set({ [ACT_GLOBAL_KEY]: loadGlobalActivity() });
+          chrome.storage.sync.set({ [META_KEY]: loadMeta() });
         } catch(e) {}
       }
     }
     let ST = loadSt();
 
     // ===== 学習アクティビティ =====
-    const ACT_GLOBAL_KEY = 'brain_reader_activity_global';
     function todayKey() {
       const d = new Date();
       return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
     }
+    // loadGlobalActivity/saveGlobalActivity は learningDays（横断学習履歴）に対するアクセサ。
+    // 内部実装は reader_meta.learningDays を読み書きする。呼び出し側 API は v1.2.0 と互換。
     function loadGlobalActivity() {
-      try { return JSON.parse(localStorage.getItem(ACT_GLOBAL_KEY)) || {}; } catch(e) { return {}; }
+      const m = loadMeta();
+      return m.learningDays || {};
     }
     function saveGlobalActivity(a) {
-      try { localStorage.setItem(ACT_GLOBAL_KEY, JSON.stringify(a)); } catch(e) {}
-      if (useSync) { try { chrome.storage.sync.set({ [ACT_GLOBAL_KEY]: a }); } catch(e) {} }
+      const m = loadMeta();
+      m.learningDays = a;
+      saveMeta(m);
     }
-    // 起動時にchrome.storage.syncからアクティビティログを復元（他端末のデータをマージ）
+    // 起動時にchrome.storage.syncから reader_meta を復元（他端末のデータをマージ）
     if (useSync) {
       try {
-        chrome.storage.sync.get([ACT_GLOBAL_KEY], result => {
-          const remote = result[ACT_GLOBAL_KEY];
+        chrome.storage.sync.get([META_KEY], result => {
+          const remote = result[META_KEY];
           if (remote && typeof remote === 'object') {
-            const local = loadGlobalActivity();
+            const local = loadMeta();
+            const remoteLD = remote.learningDays || {};
+            const localLD = local.learningDays || {};
             // マージ: 各日付でsectionsが大きい方を採用
-            Object.keys(remote).forEach(k => {
-              const r = remote[k], l = local[k];
-              if (!l || (r && r.sections > (l.sections||0))) local[k] = r;
+            Object.keys(remoteLD).forEach(k => {
+              const r = remoteLD[k], l = localLD[k];
+              if (!l || (r && (r.sections||0) > (l.sections||0))) localLD[k] = r;
             });
-            try { localStorage.setItem(ACT_GLOBAL_KEY, JSON.stringify(local)); } catch(e) {}
+            local.learningDays = localLD;
+            // affiliate / tutorial フラグは local 優先（デバイス固有情報を上書きしない）
+            if (!local.brainAffiliateLinks && remote.brainAffiliateLinks) local.brainAffiliateLinks = remote.brainAffiliateLinks;
+            if (!local.tutorialDoneV1 && remote.tutorialDoneV1) local.tutorialDoneV1 = remote.tutorialDoneV1;
+            try { localStorage.setItem(META_KEY, JSON.stringify(local)); } catch(e) {}
           }
         });
       } catch(e) {}
@@ -304,10 +491,8 @@
     }
 
     // ===== ページ判定 =====
-    function isTopPage() {
-      const p = location.pathname.replace(/\/+$/,'');
-      return p === '' || p === '/top' || p === '/home';
-    }
+    // 名前は v1.2.0 と互換だが、サイトごとに「記事ページか否か」を SITE.isArticlePage で判定。
+    function isTopPage() { return !SITE.isArticlePage(); }
   
     // ===== UI構築 =====
     const pb = document.createElement('div');
@@ -332,7 +517,7 @@
     panel.id = 'brain-reader-panel';
     panel.innerHTML = `
       <div id="brain-reader-header">
-        <div class="br-title">${svg('book',16)}<span>Brain Reader</span></div>
+        <div class="br-title">${svg('book',16)}<span>${SITE.brand}</span></div>
         <div class="br-h-actions">
           <button id="br-cls" title="閉じる">${svg('x',16)}</button>
         </div>
@@ -375,9 +560,9 @@
             <div class="br-step"><span class="br-step-num">3</span><div>ペンアイコンを押すと、メモ付きハイライトとして保存できます。</div></div>
             <div class="br-step"><span class="br-step-num">4</span><div><kbd>Alt</kbd>＋ハイライト部分をクリックで個別削除できます。</div></div>
             <div class="br-step"><span class="br-step-num">5</span><div>ハイライトタブの「Markdownでコピー」で全ハイライトを書き出せます。</div></div>
-            <div class="br-step"><span class="br-step-num">6</span><div>各ハイライトの<b>𝕏ポストボタン</b>で、学びをXにシェアできます。紹介リンク付きで投稿されます。</div></div>
+            <div class="br-step"><span class="br-step-num">6</span><div>各ハイライトの<b>𝕏ポストボタン</b>で、学びをXにシェアできます。${SITE.supportsAffiliate ? '紹介リンク付きで投稿されます。' : ''}</div></div>
           </div>
-          <div class="br-help-block">
+          ${SITE.supportsAffiliate ? `<div class="br-help-block">
             <h5><span style="display:inline-flex;width:14px;height:14px;vertical-align:middle;margin-right:6px">${xSvg()}</span><span>Xシェア・紹介リンク設定</span></h5>
             <p>ハイライトのメモや学習カレンダーの連続記録をXにポストできます。紹介リンク（アフィリエイトURL）を設定すると、ポストに自動で含まれます。</p>
             <div class="br-step"><span class="br-step-num">1</span><div>Brainの記事ページにある<b>「紹介URLをコピー」</b>ボタンをクリック</div></div>
@@ -387,7 +572,7 @@
               <input type="text" id="br-aff-input" placeholder="紹介URLを貼り付け（brmk.io/...）" value="${escapeHtml(getAffiliateURL()||'')}" style="flex:1;padding:7px 10px;background:#0f0f23;border:1px solid #2d2d4e;border-radius:6px;color:#e0e0e0;font-size:12px;outline:none">
               <button class="br-btn ghost" id="br-aff-save" style="padding:7px 12px;white-space:nowrap">保存</button>
             </div>
-          </div>
+          </div>` : ''}
           <div class="br-help-block">
             <h5>${svg('list',14)}<span>目次・既読管理</span></h5>
             <p>目次タブから任意のセクションへワンクリック移動。スクロール時に画面上部に来た見出しは<b>自動的に既読</b>として記録されます（緑チェック）。</p>
@@ -406,7 +591,10 @@
   
     // ===== Xシェア & ストリーク演出 =====
     function xSvg() { return '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>'; }
-    (function injectAffiliateInterceptor() { try {
+    (function injectAffiliateInterceptor() {
+      // brain 以外（tips/note）はアフィリ概念が無いので何もしない
+      if (!SITE.supportsAffiliate) return;
+      try {
       const script = document.createElement('script');
       script.textContent = `(function(){
         // window.open傍受
@@ -444,24 +632,36 @@
       script.remove();
     } catch(e) { console.warn('Brain Reader: affiliate interceptor failed (CSP?)', e); }
     })();
-    // content script側でカスタムイベントをリッスン
-    document.addEventListener('br-affiliate-detected', function(e) {
-      const url = e.detail;
-      if (!url || typeof url !== 'string') return;
-      const m = url.match(/https?:\/\/brmk\.io\/[\w]+/) || url.match(/https?%3A%2F%2Fbrmk\.io%2F[\w]+/);
-      if (m) {
-        const found = m[0].includes('%3A') ? decodeURIComponent(m[0]) : m[0];
-        _affiliateURL = found;
-        try { localStorage.setItem('br_aff_' + location.pathname, found); } catch(e2) {}
-        toast('🔗 アフィリリンクを検出！今後のシェアに自動で含まれます');
-      }
-    });
+    // content script側でカスタムイベントをリッスン（brain のみ）
+    if (SITE.supportsAffiliate) {
+      document.addEventListener('br-affiliate-detected', function(e) {
+        const url = e.detail;
+        if (!url || typeof url !== 'string') return;
+        const m = url.match(/https?:\/\/brmk\.io\/[\w]+/) || url.match(/https?%3A%2F%2Fbrmk\.io%2F[\w]+/);
+        if (m) {
+          const found = m[0].includes('%3A') ? decodeURIComponent(m[0]) : m[0];
+          _affiliateURL = found;
+          setAffiliateForCurrentPath(found);
+          toast('🔗 アフィリリンクを検出！今後のシェアに自動で含まれます');
+        }
+      });
+    }
+    // アフィリ URL は reader_meta.brainAffiliateLinks[<path>] に永続化（brain 専用フィールド）
+    function setAffiliateForCurrentPath(url) {
+      const m = loadMeta();
+      m.brainAffiliateLinks = m.brainAffiliateLinks || {};
+      if (url) m.brainAffiliateLinks[location.pathname] = url;
+      else delete m.brainAffiliateLinks[location.pathname];
+      saveMeta(m);
+    }
     function getAffiliateURL() {
+      if (!SITE.supportsAffiliate) return null;
       // 1. メモリキャッシュ
       if (_affiliateURL) return _affiliateURL;
-      // 2. localStorageキャッシュ（前回検出分）
+      // 2. reader_meta から取得
       try {
-        const cached = localStorage.getItem('br_aff_' + location.pathname);
+        const links = (loadMeta().brainAffiliateLinks) || {};
+        const cached = links[location.pathname];
         if (cached && cached.includes('brmk.io')) { _affiliateURL = cached; return cached; }
       } catch(e) {}
       // 3. 見つからない場合null
@@ -477,7 +677,9 @@
       } else {
         const url = 'https://x.com/intent/tweet?text=' + encodeURIComponent(text);
         window.open(url, '_blank', 'width=550,height=420');
-        toast('💡 Tip: 先にBrainの「紹介URLをコピー」か「Xでシェア」を1回押すと、アフィリリンクが自動検出されます');
+        if (SITE.supportsAffiliate) {
+          toast('💡 Tip: 先にBrainの「紹介URLをコピー」か「Xでシェア」を1回押すと、アフィリリンクが自動検出されます');
+        }
       }
     }
     function calcStreak() {
@@ -509,7 +711,7 @@
       const monthKey = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
       let monthSec = 0;
       Object.keys(monthLog).forEach(k => { if (k.startsWith(monthKey)) { const v = monthLog[k]; monthSec += v ? (typeof v==='number'?v:(v.sections||0)) : 0; } });
-      const shareText = `Brain学習 ${emoji} ${streak}日連続中！今月${monthSec}セクション読了📚 #Brain学習 #継続は力なり`;
+      const shareText = `${SITE.hashtag} ${emoji} ${streak}日連続中！今月${monthSec}セクション読了📚 #${SITE.hashtag} #継続は力なり`;
       banner.innerHTML = `
         <button class="br-streak-close" title="閉じる">✕</button>
         <div class="br-streak-fire">${emoji}</div>
@@ -533,7 +735,8 @@
       clearTimeout(t._t); t._t = setTimeout(()=>t.style.opacity='0', 2500);
     }
   
-    function getBody() { return document.querySelector('._body_vrp2u_275') || document.querySelector('.body'); }
+    function getBody() { return SITE.getBody(); }
+    function getHeadingsIn(body) { return SITE.getHeadings(body); }
   
     // ===== 目次構築 =====
     function buildTOC() {
@@ -543,7 +746,7 @@
       if (!body || !list) return;
       const prevScroll = scroller ? scroller.scrollTop : 0;
       list.innerHTML = '';
-      body.querySelectorAll('h2,h3,h4').forEach(h => {
+      SITE.getHeadings(body).forEach(h => {
         const div = document.createElement('div');
         const read = ST.readSections.includes(h.id);
         div.className = 'br-toc-item ' + h.tagName.toLowerCase() + (read ? ' read' : '');
@@ -660,7 +863,7 @@
           const quote = hl.text.length > 80 ? hl.text.substring(0,80)+'…' : hl.text;
           let txt = `📖「${quote}」`;
           if (hl.note) txt += `\n💡 ${hl.note}`;
-          txt += `\n\n#Brain学習 #読書メモ`;
+          txt += `\n\n#${SITE.hashtag} #読書メモ`;
           shareOnX(txt);
         });
         it.querySelector('.bm-del').addEventListener('click', e => {
@@ -888,7 +1091,7 @@
     // ===== 見出しへの栞ボタン =====
     function addHeadingActions() {
       const body = getBody(); if (!body) return;
-      body.querySelectorAll('h2,h3,h4').forEach(h => {
+      SITE.getHeadings(body).forEach(h => {
         if (h.querySelector('.br-heading-actions')) return;
         if (!h.id) return;
         const wrap = document.createElement('span');
@@ -1003,11 +1206,11 @@
         const readCnt = ST.readSections.length;
         const pct = total ? Math.min(100, Math.round(readCnt/total*100)) : 0;
         const s = calcStreak();
-        let txt = `📚 Brain学習の進捗報告！\n`;
+        let txt = `📚 ${SITE.hashtag}の進捗報告！\n`;
         txt += `✅ ${readCnt}/${total}セクション読了（${pct}%）\n`;
         if (s >= 2) txt += `🔥 ${s}日連続学習中！\n`;
         txt += `📖 栞${ST.bookmarks.length}件 / ✍️ ハイライト${ST.highlights.length}件\n`;
-        txt += `#Brain学習 #継続は力なり`;
+        txt += `#${SITE.hashtag} #継続は力なり`;
         shareOnX(txt);
       });
       document.getElementById('br-reset-progress').addEventListener('click', () => {
@@ -1052,7 +1255,7 @@
           const mk = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
           let ms = 0;
           Object.keys(log).forEach(k => { if (k.startsWith(mk)) { const v = log[k]; ms += v?(typeof v==='number'?v:(v.sections||0)):0; } });
-          shareOnX(`Brain学習 🔥 ${s}日連続中！今月${ms}セクション読了📚 #Brain学習 #継続は力なり`);
+          shareOnX(`${SITE.hashtag} 🔥 ${s}日連続中！今月${ms}セクション読了📚 #${SITE.hashtag} #継続は力なり`);
         });
       }
     }
@@ -1061,7 +1264,7 @@
     document.getElementById('br-export').addEventListener('click', () => {
       if (!ST.highlights.length) { toast('ハイライトがありません', true); return; }
       const today = new Date().toLocaleDateString('ja-JP');
-      let md = `# Brain学習ハイライトまとめ\n作成日: ${today}\n\n---\n\n`;
+      let md = `# ${SITE.hashtag}ハイライトまとめ\n作成日: ${today}\n\n---\n\n`;
       ST.highlights.forEach((hl, i) => {
         md += `## ${i+1}. ${hl.section || '(セクション不明)'}\n> ${hl.text}\n\n`;
         if (hl.note) md += `📝 メモ: ${hl.note}\n\n`;
@@ -1183,26 +1386,39 @@
     });
     document.getElementById('br-cls').addEventListener('click', () => setPanelOpen(false));
     document.getElementById('br-tut-restart').addEventListener('click', () => startTutorial());
-    document.getElementById('br-aff-save').addEventListener('click', () => {
+    {
+      const saveBtn = document.getElementById('br-aff-save');
+      if (saveBtn) saveBtn.addEventListener('click', () => {
       const input = document.getElementById('br-aff-input');
       const val = (input.value || '').trim();
       if (val && val.includes('brmk.io')) {
         _affiliateURL = val;
-        try { localStorage.setItem('br_aff_' + location.pathname, val); } catch(e) {}
+        setAffiliateForCurrentPath(val);
         toast('🔗 紹介リンクを保存しました！');
       } else if (val) {
         _affiliateURL = val;
-        try { localStorage.setItem('br_aff_' + location.pathname, val); } catch(e) {}
+        setAffiliateForCurrentPath(val);
         toast('🔗 リンクを保存しました');
       } else {
         _affiliateURL = null;
-        try { localStorage.removeItem('br_aff_' + location.pathname); } catch(e) {}
+        setAffiliateForCurrentPath(null);
         toast('リンクをクリアしました');
       }
-    });
+      });
+    }
 
     // ===== チュートリアル =====
-    const TUT_KEY = 'brain_reader_tutorial_done_v1';
+    // tutorialDoneV1 は reader_meta に格納（全サイト横断）。一度終えたら他サイトでも再表示しない。
+    function isTutorialDone() {
+      try { return loadMeta().tutorialDoneV1 === '1'; } catch(e) { return false; }
+    }
+    function markTutorialDone() {
+      try {
+        const m = loadMeta();
+        m.tutorialDoneV1 = '1';
+        saveMeta(m);
+      } catch(e) {}
+    }
     const tutorial = document.createElement('div');
     tutorial.id = 'br-tutorial';
     tutorial.innerHTML = `
@@ -1225,8 +1441,8 @@
 
     const tutSteps = [
       {
-        title: 'Brain Readerへようこそ',
-        body: 'Brainの長大な記事をKindleのように快適に読むためのツールです。<br>主な機能は<b>目次・栞・ハイライト・進捗管理</b>。<br>30秒の簡単ツアーを始めます。',
+        title: `${SITE.brand}へようこそ`,
+        body: `長大な記事を Kindle のように快適に読むためのツールです。<br>主な機能は<b>目次・栞・ハイライト・進捗管理</b>。<br>30秒の簡単ツアーを始めます。`,
         target: null, action: () => setPanelOpen(false)
       },
       {
@@ -1313,7 +1529,7 @@
     }
     function endTutorial() {
       tutorial.classList.remove('show');
-      try { localStorage.setItem(TUT_KEY, '1'); } catch(e) {}
+      markTutorialDone();
     }
     document.getElementById('br-tut-next').addEventListener('click', () => {
       if (tutIdx >= tutSteps.length - 1) {
@@ -1424,7 +1640,7 @@
         if (isTopPage()) return;
         const body = getBody();
         if (!body) return;
-        const n = body.querySelectorAll('h2,h3,h4').length;
+        const n = SITE.getHeadings(body).length;
         addHeadingActions();
         if (n !== lastHeadingCount) {
           lastHeadingCount = n;
@@ -1433,14 +1649,14 @@
           updateStats();
         }
       }, 2000);
-      const tutDone = (() => { try { return localStorage.getItem(TUT_KEY) === '1'; } catch(e) { return false; } })();
+      const tutDone = isTutorialDone();
       if (!tutDone) {
         setTimeout(startTutorial, 800);
       } else {
         setTimeout(showResumeBanner, 2000);
         setTimeout(showStreakCelebration, 3000);
       }
-      toast('Brain Reader 起動');
+      toast(`${SITE.brand} 起動`);
     }
     setTimeout(init, 1000);
   })();
