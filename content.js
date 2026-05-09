@@ -103,49 +103,51 @@
         --theme-input-border:#e5e7eb;
         --theme-empty-bg:#fafafa;
       }
-      /* ----- brain: 紺 #1a1a2e + 紫 #6c5ce7 ----- */
+      /* ----- brain: v1.1.0 (commit b20fb56) と pixel-perfect 一致を狙う
+              白基調 + オレンジ→赤グラデーションのアクセント。 */
       [data-br-site="brain"] {
-        --theme-accent:#6c5ce7;
-        --theme-accent-2:#a78bfa;
-        --theme-accent-bg:#2d1b69;
-        --theme-accent-border:#6c5ce7;
-        --theme-panel-bg:#1a1a2e;
-        --theme-panel-fg:#e0e0e0;
-        --theme-panel-fg-muted:#a8a8c0;
-        --theme-panel-fg-pale:#707088;
-        --theme-header-bg:#15152a;
-        --theme-tab-bar-bg:#15152a;
-        --theme-card-bg:#22223e;
-        --theme-card-fg:#e0e0e0;
-        --theme-card-hover-bg:#2d1b69;
-        --theme-divider:#2d2d4e;
-        --theme-border:#2d2d4e;
-        --theme-input-bg:#0f0f23;
-        --theme-input-fg:#e0e0e0;
-        --theme-input-border:#2d2d4e;
-        --theme-empty-bg:#22223e;
+        --theme-accent:#ef4444;
+        --theme-accent-2:#ff6b35;
+        --theme-accent-bg:#fff5f3;
+        --theme-accent-border:#fed7aa;
+        --theme-panel-bg:#ffffff;
+        --theme-panel-fg:#1f2937;
+        --theme-panel-fg-muted:#6b7280;
+        --theme-panel-fg-pale:#9ca3af;
+        --theme-header-bg:#ffffff;
+        --theme-tab-bar-bg:#fafafa;
+        --theme-card-bg:#fafafa;
+        --theme-card-fg:#1f2937;
+        --theme-card-hover-bg:#fff5f3;
+        --theme-divider:#f1f1f1;
+        --theme-border:#e5e7eb;
+        --theme-input-bg:#ffffff;
+        --theme-input-fg:#1f2937;
+        --theme-input-border:#e5e7eb;
+        --theme-empty-bg:#fafafa;
       }
-      /* ----- tips: 黄系 ベース #FFE6AF / アクセント #FFC02E / 補助 #FFBF2E ----- */
+      /* ----- tips: brain と同じ白基調シャシー（v1.1.0 互換）+ 黄系アクセント
+              ベタ塗りはせず、active/focus/border にだけ黄を効かせる。 */
       [data-br-site="tips"] {
         --theme-accent:#FFC02E;
         --theme-accent-2:#FFBF2E;
         --theme-accent-bg:#FFE6AF;
         --theme-accent-border:#FFC02E;
-        --theme-panel-bg:#FFE6AF;
-        --theme-panel-fg:#3d2c00;
-        --theme-panel-fg-muted:#7a5a00;
-        --theme-panel-fg-pale:#a98700;
-        --theme-header-bg:#FFD96B;
-        --theme-tab-bar-bg:#FFD96B;
-        --theme-card-bg:#FFF1C4;
-        --theme-card-fg:#3d2c00;
-        --theme-card-hover-bg:#FFD96B;
-        --theme-divider:#F0D590;
-        --theme-border:#F0D590;
-        --theme-input-bg:#FFFAEB;
-        --theme-input-fg:#3d2c00;
-        --theme-input-border:#FFC02E;
-        --theme-empty-bg:#FFF1C4;
+        --theme-panel-bg:#ffffff;
+        --theme-panel-fg:#1f2937;
+        --theme-panel-fg-muted:#6b7280;
+        --theme-panel-fg-pale:#9ca3af;
+        --theme-header-bg:#ffffff;
+        --theme-tab-bar-bg:#fafafa;
+        --theme-card-bg:#fafafa;
+        --theme-card-fg:#1f2937;
+        --theme-card-hover-bg:#FFE6AF;
+        --theme-divider:#f1f1f1;
+        --theme-border:#e5e7eb;
+        --theme-input-bg:#ffffff;
+        --theme-input-fg:#1f2937;
+        --theme-input-border:#e5e7eb;
+        --theme-empty-bg:#fafafa;
       }
       #brain-reader-panel,#brain-reader-toggle,#br-highlight-popup,#br-note-modal,#br-resume,#br-toast,#br-tutorial{font-family:${BR_FONT}}
       #brain-reader-panel,#brain-reader-panel *,#br-highlight-popup,#br-highlight-popup *,#br-note-modal,#br-note-modal *,#br-resume,#br-resume *,#br-tutorial,#br-tutorial *{counter-reset:none!important;counter-increment:none!important}
@@ -339,7 +341,7 @@
       [data-br-site] #brain-reader-header{background:var(--theme-header-bg);border-bottom-color:var(--theme-divider)}
       [data-br-site] #brain-reader-header .br-title{color:var(--theme-accent)}
       [data-br-site] #brain-reader-header .br-title svg{stroke:var(--theme-accent)}
-      /* tips の黄系は黄→黄でコントラスト落ちるので、タイトルだけ濃茶に */
+      /* tips: ヘッダタイトルは標準黒系（黄 on 白でコントラスト落ちるため） */
       [data-br-site="tips"] #brain-reader-header .br-title{color:var(--theme-panel-fg)}
       [data-br-site="tips"] #brain-reader-header .br-title svg{stroke:var(--theme-panel-fg)}
       [data-br-site] #brain-reader-header .br-h-actions button{color:var(--theme-panel-fg-muted)}
@@ -416,10 +418,7 @@
       [data-br-site] .br-check{color:var(--theme-panel-fg-pale)}
       [data-br-site] .br-dot-mark{color:var(--theme-panel-fg-pale)}
 
-      /* アフィリ入力欄（brain のみ表示）— 紺背景に合わせて文字色だけ調整 */
-      [data-br-site="brain"] #br-aff-input{background:var(--theme-input-bg)!important;border-color:var(--theme-input-border)!important;color:var(--theme-input-fg)!important}
-
-      /* tips の brain-reader-toggle は黄色グラデにする — gradient は accent-2 → accent */
+      /* tips の toggle 影は黄色寄りに（brain のオレンジ系赤影と差別化） */
       [data-br-site="tips"] #brain-reader-toggle{box-shadow:-2px 0 10px rgba(255,192,46,.3)}
     `;
     document.head.appendChild(style);
