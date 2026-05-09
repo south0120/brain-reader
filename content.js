@@ -386,6 +386,14 @@
       [data-br-site] .br-cal-scope{background:var(--theme-panel-bg);border-color:var(--theme-divider)}
       [data-br-site] .br-cal-scope-btn{color:var(--theme-panel-fg-pale)}
       [data-br-site] .br-cal-scope-btn:hover{color:var(--theme-accent)}
+      /* アクティブタブは背景がアクセント色グラデなので、文字は #fff 固定。
+         ホバー時もアクセント色との同化を防ぐため明示的に再固定する
+         （:hover の specificity が .active 単独に勝つので両方書く必要あり）。 */
+      [data-br-site] .br-cal-scope-btn.active,
+      [data-br-site] .br-cal-scope-btn.active:hover{
+        color:#ffffff;
+        background:linear-gradient(135deg,var(--theme-accent-2),var(--theme-accent));
+      }
       [data-br-site] .br-cal-grid-head span{color:var(--theme-panel-fg-pale)}
       [data-br-site] .br-cal-cell{background:var(--theme-panel-bg);border-color:var(--theme-divider)}
       [data-br-site] .br-cal-cell .br-cal-d{color:var(--theme-panel-fg-muted)}
