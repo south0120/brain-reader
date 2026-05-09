@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "Brain Reader - 学習アシスト",
-  "version": "1.2.0",
-  "description": "Brain記事での学習をサポート。目次・栞・ハイライト・メモ・進捗管理・学習カレンダー・連続学習トラッキング機能付き。",
+  "name": "Reader - 学習アシスト",
+  "version": "1.3.0",
+  "version_name": "1.3.0-tips-mvp-fixed3",
+  "description": "Brain / Tips 記事での学習をサポート。目次・栞・ハイライト・メモ・進捗管理・学習カレンダー・連続学習トラッキング機能付き。サイト自動判定でブランドが切り替わります。",
   "permissions": ["storage", "clipboardWrite"],
   "icons": {
     "16": "icon16.png",
@@ -11,7 +12,7 @@
     "128": "icon128.png"
   },
   "action": {
-    "default_title": "Brain Reader",
+    "default_title": "Reader (Brain / Tips)",
     "default_icon": {
       "16": "icon16.png",
       "32": "icon32.png",
@@ -21,7 +22,10 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://brain-market.com/*"],
+      "matches": [
+        "https://brain-market.com/*",
+        "https://tips.jp/*"
+      ],
       "js": ["content.js"],
       "run_at": "document_idle"
     }

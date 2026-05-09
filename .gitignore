@@ -17,3 +17,8 @@
 
 # Node (in case anyone adds tooling later)
 node_modules/
+
+# Real-data fixtures (PII — keep local only).
+# Synthetic fixtures live inline inside test_*.mjs and are committed.
+test_fixtures_*.json
+*_dump.json
