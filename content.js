@@ -79,18 +79,73 @@
     style.id = 'brain-reader-style';
     const BR_FONT = `"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic Medium","Yu Gothic",YuGothic,Meiryo,-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif`;
     style.textContent = `
-      /* ===== サイト別テーマ変数（[data-br-site] で切替）===== */
+      /* ===== サイト別テーマ変数（[data-br-site] で切替）=====
+         :root はフォールバック（v1.2.0 互換 light）。実サイトでは
+         必ず brain or tips のどちらかに上書きされる。 */
       :root {
-        --theme-accent:var(--theme-accent);          /* メインアクセント（active red） */
-        --theme-accent-2:var(--theme-accent-2);        /* グラデ用セカンダリ（orange） */
-        --theme-accent-bg:var(--theme-accent-bg);       /* 淡い背景 */
-        --theme-accent-border:var(--theme-accent-border);   /* やわらかい縁取り */
+        --theme-accent:#ef4444;
+        --theme-accent-2:#ff6b35;
+        --theme-accent-bg:#fff5f3;
+        --theme-accent-border:#fed7aa;
+        --theme-panel-bg:#ffffff;
+        --theme-panel-fg:#1f2937;
+        --theme-panel-fg-muted:#6b7280;
+        --theme-panel-fg-pale:#9ca3af;
+        --theme-header-bg:#ffffff;
+        --theme-tab-bar-bg:#fafafa;
+        --theme-card-bg:#fafafa;
+        --theme-card-fg:#1f2937;
+        --theme-card-hover-bg:#fff5f3;
+        --theme-divider:#f1f1f1;
+        --theme-border:#e5e7eb;
+        --theme-input-bg:#ffffff;
+        --theme-input-fg:#1f2937;
+        --theme-input-border:#e5e7eb;
+        --theme-empty-bg:#fafafa;
       }
+      /* ----- brain: 紺 #1a1a2e + 紫 #6c5ce7 ----- */
+      [data-br-site="brain"] {
+        --theme-accent:#6c5ce7;
+        --theme-accent-2:#a78bfa;
+        --theme-accent-bg:#2d1b69;
+        --theme-accent-border:#6c5ce7;
+        --theme-panel-bg:#1a1a2e;
+        --theme-panel-fg:#e0e0e0;
+        --theme-panel-fg-muted:#a8a8c0;
+        --theme-panel-fg-pale:#707088;
+        --theme-header-bg:#15152a;
+        --theme-tab-bar-bg:#15152a;
+        --theme-card-bg:#22223e;
+        --theme-card-fg:#e0e0e0;
+        --theme-card-hover-bg:#2d1b69;
+        --theme-divider:#2d2d4e;
+        --theme-border:#2d2d4e;
+        --theme-input-bg:#0f0f23;
+        --theme-input-fg:#e0e0e0;
+        --theme-input-border:#2d2d4e;
+        --theme-empty-bg:#22223e;
+      }
+      /* ----- tips: 黄系 ベース #FFE6AF / アクセント #FFC02E / 補助 #FFBF2E ----- */
       [data-br-site="tips"] {
-        --theme-accent:#ff6b1a;          /* tips のオレンジ寄りアクセント */
-        --theme-accent-2:#ff8c42;        /* tips spec 配色 */
-        --theme-accent-bg:#fff5e6;       /* tips spec 生成色 */
-        --theme-accent-border:#ffd5a3;   /* オレンジ寄り縁取り */
+        --theme-accent:#FFC02E;
+        --theme-accent-2:#FFBF2E;
+        --theme-accent-bg:#FFE6AF;
+        --theme-accent-border:#FFC02E;
+        --theme-panel-bg:#FFE6AF;
+        --theme-panel-fg:#3d2c00;
+        --theme-panel-fg-muted:#7a5a00;
+        --theme-panel-fg-pale:#a98700;
+        --theme-header-bg:#FFD96B;
+        --theme-tab-bar-bg:#FFD96B;
+        --theme-card-bg:#FFF1C4;
+        --theme-card-fg:#3d2c00;
+        --theme-card-hover-bg:#FFD96B;
+        --theme-divider:#F0D590;
+        --theme-border:#F0D590;
+        --theme-input-bg:#FFFAEB;
+        --theme-input-fg:#3d2c00;
+        --theme-input-border:#FFC02E;
+        --theme-empty-bg:#FFF1C4;
       }
       #brain-reader-panel,#brain-reader-toggle,#br-highlight-popup,#br-note-modal,#br-resume,#br-toast,#br-tutorial{font-family:${BR_FONT}}
       #brain-reader-panel,#brain-reader-panel *,#br-highlight-popup,#br-highlight-popup *,#br-note-modal,#br-note-modal *,#br-resume,#br-resume *,#br-tutorial,#br-tutorial *{counter-reset:none!important;counter-increment:none!important}
@@ -275,6 +330,97 @@
       .br-help-block kbd{background:var(--theme-accent-bg);border:1px solid var(--theme-accent-border);border-radius:4px;padding:1px 6px;font-size:11px;color:var(--theme-accent)}
       .br-help-block .br-step{display:flex;gap:8px;align-items:flex-start;margin:6px 0}
       .br-help-block .br-step-num{background:var(--theme-accent);color:#fff;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;margin-top:1px}
+
+      /* ===== 表面色をテーマ変数で上書き =====
+         上の :root と [data-br-site="..."] で設定した変数を、ここで具体的な
+         element / state に流し込む。selector specificity が「id 単独」より
+         高い「[属性] + id」になるので、既存の v1.2.0 ルールに勝つ。 */
+      [data-br-site] #brain-reader-panel{background:var(--theme-panel-bg);color:var(--theme-panel-fg);border-left-color:var(--theme-border)}
+      [data-br-site] #brain-reader-header{background:var(--theme-header-bg);border-bottom-color:var(--theme-divider)}
+      [data-br-site] #brain-reader-header .br-title{color:var(--theme-accent)}
+      [data-br-site] #brain-reader-header .br-title svg{stroke:var(--theme-accent)}
+      /* tips の黄系は黄→黄でコントラスト落ちるので、タイトルだけ濃茶に */
+      [data-br-site="tips"] #brain-reader-header .br-title{color:var(--theme-panel-fg)}
+      [data-br-site="tips"] #brain-reader-header .br-title svg{stroke:var(--theme-panel-fg)}
+      [data-br-site] #brain-reader-header .br-h-actions button{color:var(--theme-panel-fg-muted)}
+      [data-br-site] #brain-reader-header .br-h-actions button:hover{color:var(--theme-accent);background:var(--theme-accent-bg)}
+      [data-br-site] #brain-reader-tabs{background:var(--theme-tab-bar-bg);border-bottom-color:var(--theme-divider)}
+      [data-br-site] .br-tab{color:var(--theme-panel-fg-pale)}
+      [data-br-site] .br-tab:hover{color:var(--theme-accent);background:var(--theme-card-hover-bg)}
+      [data-br-site] .br-tab.active{color:var(--theme-accent);border-bottom-color:var(--theme-accent);background:var(--theme-panel-bg)}
+      [data-br-site] #brain-reader-content{background:var(--theme-panel-bg)}
+      [data-br-site] #brain-reader-content::-webkit-scrollbar-thumb{background:var(--theme-divider)}
+
+      /* TOC：ビルトイン目次相当のタイトな行間に圧縮（両サイト共通） */
+      [data-br-site] .br-toc-item{padding:3px 8px;line-height:1.3;color:var(--theme-panel-fg);gap:5px}
+      [data-br-site] .br-toc-item.h2{font-size:12px;color:var(--theme-panel-fg);font-weight:600}
+      [data-br-site] .br-toc-item.h3{font-size:11px;padding-left:18px;color:var(--theme-panel-fg-muted)}
+      [data-br-site] .br-toc-item.h4{font-size:10.5px;padding-left:28px;color:var(--theme-panel-fg-pale)}
+      [data-br-site] .br-toc-item:hover{background:var(--theme-card-hover-bg);color:var(--theme-accent)}
+      [data-br-site] .br-toc-item.active{background:var(--theme-card-hover-bg);color:var(--theme-accent);font-weight:600}
+      [data-br-site] .br-toc-item.active .br-toc-txt{color:var(--theme-accent)}
+
+      /* 栞・ハイライト・統計カード */
+      [data-br-site] .br-bookmark-item{background:var(--theme-card-bg);color:var(--theme-card-fg);border-color:var(--theme-divider);border-left-color:var(--theme-accent)}
+      [data-br-site] .br-bookmark-item:hover{background:var(--theme-card-hover-bg);border-color:var(--theme-accent-border);border-left-color:var(--theme-accent)}
+      [data-br-site] .br-bookmark-item .bm-title{color:var(--theme-card-fg)}
+      [data-br-site] .br-bookmark-item .bm-meta{color:var(--theme-panel-fg-pale)}
+      [data-br-site] .br-hl-item{background:var(--theme-card-bg);border-color:var(--theme-divider)}
+      [data-br-site] .br-hl-item:hover{background:var(--theme-card-hover-bg)}
+      [data-br-site] .br-hl-text{color:var(--theme-card-fg)}
+      [data-br-site] .br-hl-meta{color:var(--theme-panel-fg-pale)}
+      [data-br-site] .br-stat-card{background:var(--theme-card-bg);border-color:var(--theme-divider)}
+      [data-br-site] .br-stat-val{color:var(--theme-accent)}
+      [data-br-site] .br-stat-lbl{color:var(--theme-panel-fg-muted)}
+      [data-br-site] .br-progress-box{background:var(--theme-accent-bg);border-color:var(--theme-accent-border)}
+      [data-br-site] .br-progress-lbl{color:var(--theme-panel-fg-pale)}
+      [data-br-site] .br-progress-pct{color:var(--theme-accent)}
+
+      /* カレンダー */
+      [data-br-site] .br-cal-wrap{background:var(--theme-card-bg);border-color:var(--theme-divider)}
+      [data-br-site] .br-cal-title{color:var(--theme-card-fg)}
+      [data-br-site] .br-cal-nav{background:var(--theme-panel-bg);border-color:var(--theme-border);color:var(--theme-panel-fg-muted)}
+      [data-br-site] .br-cal-nav:hover{background:var(--theme-accent-bg);border-color:var(--theme-accent-border);color:var(--theme-accent)}
+      [data-br-site] .br-cal-scope{background:var(--theme-panel-bg);border-color:var(--theme-divider)}
+      [data-br-site] .br-cal-scope-btn{color:var(--theme-panel-fg-pale)}
+      [data-br-site] .br-cal-scope-btn:hover{color:var(--theme-accent)}
+      [data-br-site] .br-cal-grid-head span{color:var(--theme-panel-fg-pale)}
+      [data-br-site] .br-cal-cell{background:var(--theme-panel-bg);border-color:var(--theme-divider)}
+      [data-br-site] .br-cal-cell .br-cal-d{color:var(--theme-panel-fg-muted)}
+      [data-br-site] .br-cal-stat{background:var(--theme-panel-bg);border-color:var(--theme-divider)}
+      [data-br-site] .br-cal-s-val{color:var(--theme-accent)}
+      [data-br-site] .br-cal-s-lbl{color:var(--theme-panel-fg-muted)}
+
+      /* ヘルプタブ */
+      [data-br-site] .br-help-block{background:var(--theme-card-bg);border-color:var(--theme-divider)}
+      [data-br-site] .br-help-block h5{color:var(--theme-accent)}
+      [data-br-site] .br-help-block h5 svg{stroke:var(--theme-accent)}
+      [data-br-site] .br-help-block p{color:var(--theme-card-fg)}
+      [data-br-site] .br-help-block .br-step{color:var(--theme-card-fg)}
+      [data-br-site] .br-help-block .br-step div{color:var(--theme-card-fg)}
+
+      /* 検索・空状態・セクションタイトル */
+      [data-br-site] .br-empty{background:var(--theme-empty-bg);color:var(--theme-panel-fg-pale);border-color:var(--theme-divider)}
+      [data-br-site] .br-empty b{color:var(--theme-accent)}
+      [data-br-site] .br-sec-title{color:var(--theme-panel-fg-pale)}
+      [data-br-site] .br-search-ico{color:var(--theme-panel-fg-pale)}
+      [data-br-site] #br-search{background:var(--theme-input-bg);color:var(--theme-input-fg);border-color:var(--theme-input-border)}
+      [data-br-site] #br-search:focus{border-color:var(--theme-accent)}
+
+      /* ボタン variants */
+      [data-br-site] .br-btn.ghost{background:var(--theme-panel-bg);color:var(--theme-panel-fg-muted);border-color:var(--theme-border)}
+      [data-br-site] .br-btn.ghost:hover{background:var(--theme-card-hover-bg);color:var(--theme-accent);border-color:var(--theme-accent-border)}
+      [data-br-site] .br-btn.danger{background:var(--theme-panel-bg)}
+      [data-br-site] .bm-del{color:var(--theme-panel-fg-pale)}
+      [data-br-site] .bm-del:hover{color:var(--theme-accent);background:var(--theme-card-hover-bg)}
+      [data-br-site] .br-check{color:var(--theme-panel-fg-pale)}
+      [data-br-site] .br-dot-mark{color:var(--theme-panel-fg-pale)}
+
+      /* アフィリ入力欄（brain のみ表示）— 紺背景に合わせて文字色だけ調整 */
+      [data-br-site="brain"] #br-aff-input{background:var(--theme-input-bg)!important;border-color:var(--theme-input-border)!important;color:var(--theme-input-fg)!important}
+
+      /* tips の brain-reader-toggle は黄色グラデにする — gradient は accent-2 → accent */
+      [data-br-site="tips"] #brain-reader-toggle{box-shadow:-2px 0 10px rgba(255,192,46,.3)}
     `;
     document.head.appendChild(style);
 
