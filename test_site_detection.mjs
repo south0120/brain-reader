@@ -11,13 +11,20 @@ if (!m) { console.error('SITES block not found'); process.exit(1); }
 const sitesSrc = m[1];
 
 const cases = [
-  { host: 'brain-market.com',     pathname: '/u/ikehaya/a/foo', expectId: 'brain', expectArticle: true },
-  { host: 'brain-market.com',     pathname: '/',                expectId: 'brain', expectArticle: false },
-  { host: 'brain-market.com',     pathname: '/top',             expectId: 'brain', expectArticle: false },
-  { host: 'tips.jp',              pathname: '/u/me/a/contents', expectId: 'tips',  expectArticle: true },
-  { host: 'tips.jp',              pathname: '/',                expectId: 'tips',  expectArticle: false },
-  { host: 'tips.jp',              pathname: '/u/me',            expectId: 'tips',  expectArticle: false },
-  { host: 'note.com',             pathname: '/foo',             expectId: null,    expectArticle: null },
+  { host: 'brain-market.com',     pathname: '/u/ikehaya/a/foo',      expectId: 'brain', expectArticle: true },
+  { host: 'brain-market.com',     pathname: '/',                     expectId: 'brain', expectArticle: false },
+  { host: 'brain-market.com',     pathname: '/top',                  expectId: 'brain', expectArticle: false },
+  { host: 'tips.jp',              pathname: '/u/me/a/contents',      expectId: 'tips',  expectArticle: true },
+  { host: 'tips.jp',              pathname: '/',                     expectId: 'tips',  expectArticle: false },
+  { host: 'tips.jp',              pathname: '/u/me',                 expectId: 'tips',  expectArticle: false },
+  // note.com — articles use /<author>/n/n<id> format
+  { host: 'note.com',             pathname: '/info/n/n149496117e1b', expectId: 'note',  expectArticle: true },
+  { host: 'note.com',             pathname: '/info/n/n81d715e05ecf', expectId: 'note',  expectArticle: true },
+  { host: 'note.com',             pathname: '/',                     expectId: 'note',  expectArticle: false },
+  { host: 'note.com',             pathname: '/info',                 expectId: 'note',  expectArticle: false },
+  { host: 'note.com',             pathname: '/foo',                  expectId: 'note',  expectArticle: false },
+  // unsupported
+  { host: 'example.com',          pathname: '/',                     expectId: null,    expectArticle: null },
 ];
 
 let pass = 0, fail = 0;

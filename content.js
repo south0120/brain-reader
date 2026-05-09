@@ -56,7 +56,33 @@
         // tips.jp の記事 URL は /u/<author>/a/<slug>
         isArticlePage: () => /^\/u\/[^/]+\/a\/[^/]+\/?$/.test(location.pathname),
       },
-      // note: { ... }  // フェーズ2 で追加予定（noteReader）
+      note: {
+        id: 'note',
+        brand: 'noteReader',           // 公式表記に合わせて n は小文字
+        storagePrefix: 'note',
+        themeName: 'note',
+        hashtag: 'note学習',
+        supportsAffiliate: false,
+        match: (host) => host === 'note.com' || host.endsWith('.note.com'),
+        // note.com は SSR で [data-name="body"] が安定して取れる。
+        // CSS module ハッシュ class（note-common-styles__textnote-body）も
+        // 一応 fallback として持つ。
+        getBody: () => document.querySelector('[data-name="body"]')
+                     || document.querySelector('.note-common-styles__textnote-body'),
+        // 本文見出しは h2 / h3。サーバ側で UUID 形式の id が振られているので
+        // そのまま既読/栞のキーに使える。h4 は本文に出ない（list タイトル等は body 外）。
+        getHeadings: (body) => body.querySelectorAll('h2, h3'),
+        getTitle: () => document.querySelector('h1.o-noteContentHeader__title')?.innerText
+                     || document.querySelector('h1')?.innerText
+                     || document.querySelector('meta[property="og:title"]')?.content
+                     || document.title,
+        getCanonicalUrl: () => document.querySelector('link[rel="canonical"]')?.href
+                            || document.querySelector('meta[property="og:url"]')?.content
+                            || location.href,
+        // note.com の記事 URL は /<username|publisher>/n/n<16桁> 形式。
+        // 例: /info/n/n149496117e1b
+        isArticlePage: () => /^\/[^/]+\/n\/n[a-zA-Z0-9]+\/?$/.test(location.pathname),
+      },
     };
 
     const SITE = (function detect() {
@@ -142,6 +168,28 @@
         --theme-card-bg:#fafafa;
         --theme-card-fg:#1f2937;
         --theme-card-hover-bg:#FFE6AF;
+        --theme-divider:#f1f1f1;
+        --theme-border:#e5e7eb;
+        --theme-input-bg:#ffffff;
+        --theme-input-fg:#1f2937;
+        --theme-input-border:#e5e7eb;
+        --theme-empty-bg:#fafafa;
+      }
+      /* ----- note: 白基調 + note 公式ティール #41C9B4 アクセント ----- */
+      [data-br-site="note"] {
+        --theme-accent:#41C9B4;
+        --theme-accent-2:#5DD4C2;
+        --theme-accent-bg:#E6F8F4;
+        --theme-accent-border:#A5E3D7;
+        --theme-panel-bg:#ffffff;
+        --theme-panel-fg:#1f2937;
+        --theme-panel-fg-muted:#6b7280;
+        --theme-panel-fg-pale:#9ca3af;
+        --theme-header-bg:#ffffff;
+        --theme-tab-bar-bg:#fafafa;
+        --theme-card-bg:#fafafa;
+        --theme-card-fg:#1f2937;
+        --theme-card-hover-bg:#E6F8F4;
         --theme-divider:#f1f1f1;
         --theme-border:#e5e7eb;
         --theme-input-bg:#ffffff;
