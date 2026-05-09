@@ -235,7 +235,7 @@
       .br-cal-nav{background:#fff;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;color:#6b7280;padding:4px 6px;display:flex;align-items:center}
       .br-cal-nav:hover{color:var(--theme-accent);border-color:var(--theme-accent-border);background:var(--theme-accent-bg)}
       .br-cal-scope{display:flex;gap:4px;margin-bottom:8px;background:#fff;border-radius:6px;padding:2px;border:1px solid #f1f1f1}
-      .br-cal-scope-btn{flex:1;border:none;background:none;padding:5px;font-size:10px;color:#9ca3af;cursor:pointer;border-radius:4px;font-family:inherit;font-weight:500}
+      .br-cal-scope-btn{flex:1;border:none;background:none;padding:4px 2px;font-size:9.5px;color:#9ca3af;cursor:pointer;border-radius:4px;font-family:inherit;font-weight:500;white-space:nowrap}
       .br-cal-scope-btn:hover{color:var(--theme-accent)}
       .br-cal-scope-btn.active{background:linear-gradient(135deg,var(--theme-accent-2),var(--theme-accent));color:#fff}
       .br-cal-grid-head{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px}
@@ -546,6 +546,39 @@
     }
     runMigrationV2();
 
+    // ----- マイグレーション v3 (v1.3.1: articles → articlesBySite.brain) -----
+    // v1.3.0 までは learningDays[date].articles を「path → セクション数」の
+    // フラットマップで持っていた。v1.3.1 からはサイト別に分けるため
+    // articlesBySite[siteId] = { path: count } を導入する。
+    // 既存データはすべて brain 由来なので一律 articlesBySite.brain に転写。
+    // 元の articles フィールドは消さない（v1.3.0 互換のため）。
+    const MIGRATION_V3_MARKER = 'reader_migration_v3_done';
+    function runMigrationV3() {
+      try {
+        if (localStorage.getItem(MIGRATION_V3_MARKER) === '1') return;
+      } catch(e) { return; }
+
+      let meta;
+      try { meta = JSON.parse(localStorage.getItem(META_KEY) || '{}') || {}; } catch(e) { meta = {}; }
+      const days = meta.learningDays || {};
+      let touched = false;
+      for (const k of Object.keys(days)) {
+        const day = days[k];
+        if (!day || typeof day !== 'object') continue;
+        if (day.articlesBySite) continue; // 既に v3 形式
+        if (day.articles && typeof day.articles === 'object') {
+          day.articlesBySite = { brain: { ...day.articles } };
+          touched = true;
+        }
+      }
+      if (touched) {
+        meta.learningDays = days;
+        try { localStorage.setItem(META_KEY, JSON.stringify(meta)); } catch(e) {}
+      }
+      try { localStorage.setItem(MIGRATION_V3_MARKER, '1'); } catch(e) {}
+    }
+    runMigrationV3();
+
     // メタ操作ヘルパー
     function loadMeta() {
       try { return JSON.parse(localStorage.getItem(META_KEY) || '{}') || {}; }
@@ -624,13 +657,17 @@
       cur.sections += sectionDelta || 0;
       cur.scrollPx += scrollDelta || 0;
       ST.activityLog[k] = cur;
-      // グローバル集計（全記事合計）
+      // グローバル集計（全サイト合計）+ サイト別 path 内訳
       const g = loadGlobalActivity();
-      const gc = g[k] || {sections:0, scrollPx:0, articles:{}};
+      const gc = g[k] || {sections:0, scrollPx:0, articles:{}, articlesBySite:{}};
       gc.sections += sectionDelta || 0;
       gc.scrollPx += scrollDelta || 0;
-      if (!gc.articles) gc.articles = {};
-      gc.articles[location.pathname] = (gc.articles[location.pathname] || 0) + (sectionDelta || 0);
+      // v1.3.1: articlesBySite[siteId] にサイト別の内訳を蓄積
+      if (!gc.articlesBySite) gc.articlesBySite = {};
+      if (!gc.articlesBySite[SITE.id]) gc.articlesBySite[SITE.id] = {};
+      const siteBucket = gc.articlesBySite[SITE.id];
+      siteBucket[location.pathname] = (siteBucket[location.pathname] || 0) + (sectionDelta || 0);
+      // 注：v1.3.0 互換の articles フィールドは新規書き込みしない（v3 マイグレーション後は articlesBySite に集約）
       g[k] = gc;
       saveGlobalActivity(g);
     }
@@ -1264,10 +1301,18 @@
       const startWeekday = first.getDay();
       const monthStr = `${y}年${m+1}月`;
       const log = calendarView.scope === 'article' ? (ST.activityLog || {}) : loadGlobalActivity();
-      // 正規化: 記事別は {sections,scrollPx} 形式、グローバルも同じ
+      // 正規化: scope ごとに「今日の sections / scrollPx」を返す形に揃える
+      //   global  → v.sections（全サイト合算・既存挙動）
+      //   site    → Σ v.articlesBySite[SITE.id]（v1.3.1 で追加）
+      //   article → v.sections（ST.activityLog の per-article）
       const getDay = k => {
         const v = log[k]; if (!v) return null;
         if (typeof v === 'number') return {sections:v, scrollPx:0};
+        if (calendarView.scope === 'site' && v.articlesBySite) {
+          const bucket = v.articlesBySite[SITE.id] || {};
+          const sec = Object.values(bucket).reduce((a, b) => a + (b || 0), 0);
+          return { sections: sec, scrollPx: v.scrollPx || 0 };
+        }
         return v;
       };
       // 最大値で強度を計算
@@ -1304,7 +1349,8 @@
             <button class="br-cal-nav" id="br-cal-next" title="次月">${svg('arrowRight',14)}</button>
           </div>
           <div class="br-cal-scope">
-            <button class="br-cal-scope-btn${calendarView.scope==='global'?' active':''}" data-scope="global">全記事</button>
+            <button class="br-cal-scope-btn${calendarView.scope==='global'?' active':''}" data-scope="global">3サイト総合</button>
+            <button class="br-cal-scope-btn${calendarView.scope==='site'?' active':''}" data-scope="site">${SITE.brand.replace(/Reader$/,'')} 全記事</button>
             <button class="br-cal-scope-btn${calendarView.scope==='article'?' active':''}" data-scope="article">この記事のみ</button>
           </div>
           <div class="br-cal-grid-head">
