@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "Reader - 学習アシスト",
+  "name": "Brain / Tips / note Reader - 学習アシスト",
   "version": "1.3.2",
-  "version_name": "1.3.2-note",
-  "description": "Brain / Tips / note 記事での学習をサポート。目次・栞・ハイライト・メモ・進捗管理・学習カレンダー・連続学習トラッキング機能付き。サイト自動判定でブランドが切り替わります。",
+  "description": "Brain / Tips / note の長文記事での学習をサポート。目次・栞・ハイライト・メモ・進捗管理・学習カレンダー（3 サイト横断）。サイト自動判定でブランドが切り替わります。",
+  "homepage_url": "https://south-create.com/brain-reader/",
   "permissions": ["storage", "clipboardWrite"],
   "icons": {
     "16": "icon16.png",
@@ -12,7 +12,7 @@
     "128": "icon128.png"
   },
   "action": {
-    "default_title": "Reader (Brain / Tips)",
+    "default_title": "Reader (Brain / Tips / note)",
     "default_icon": {
       "16": "icon16.png",
       "32": "icon32.png",

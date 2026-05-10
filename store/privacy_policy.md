@@ -1,52 +1,99 @@
-# Privacy Policy - Brain Reader
+# Privacy Policy — Brain / Tips / note Reader (学習アシスト)
 
-Last updated: April 16, 2026
+**Last updated**: May 10, 2026
+**Extension version**: 1.3.2
+**Hosted version**: https://south-create.com/brain-reader/privacy/
 
-## Overview
+> このマークダウン版はソースコード上のリファレンスです。**ユーザー向けの正式版は上記の公開 URL** を参照してください。
 
-Brain Reader ("the Extension") is a Chrome extension that enhances the reading experience on brain-market.com. This privacy policy explains how the Extension handles user data.
+---
 
-## Data Collection
+## 1. Overview / 概要
 
-The Extension does **NOT** collect, transmit, or share any personal data with external servers.
+Brain / Tips / note Reader（以下「本拡張機能」）は、以下 3 サイトの長文記事の読書体験を補助する Chrome 拡張機能です。
 
-## Data Storage
+- brain-market.com（Brain）
+- tips.jp（Tips）
+- note.com（note）
 
-All data created by the Extension is stored locally on the user's device:
+本拡張機能は **どのサイトからも、どのユーザー情報も外部サーバへ送信しません**。本ポリシーはユーザーが拡張機能を利用するうえで知るべきデータの扱いを説明します。
 
-- **localStorage**: Bookmarks, highlights, notes, reading progress, and scroll position are stored in the browser's localStorage, scoped to the brain-market.com domain.
-- **chrome.storage.sync**: Learning activity logs (calendar data) are synced across the user's Chrome profile devices via Chrome's built-in sync mechanism. This data never leaves Google's infrastructure.
+## 2. Data Collection / 取得するデータ
 
-## Data Types Stored
+本拡張機能が取得・保持するデータは次の 3 種類のみです。これらはすべて**ユーザーの操作によって生成された情報**であり、本拡張機能が自動収集する個人情報はありません。
 
-| Data | Storage | Purpose |
-|------|---------|---------|
-| Bookmarks | localStorage | Save reading positions |
-| Highlights & Notes | localStorage | User-created text annotations |
-| Read sections | localStorage | Track learning progress |
-| Scroll position | localStorage | Resume reading |
-| Activity log (calendar) | localStorage + chrome.storage.sync | Learning streak tracking |
+| データ | 内容 | 取得タイミング |
+|---|---|---|
+| 栞・ハイライト・メモ | ユーザーが本文上で選択・操作した部分（最大 200 文字）と、該当セクション見出し | ユーザーが栞ボタン or マーカーをクリックしたとき |
+| 既読セクション ID | 閲覧中に画面上部に到達した見出しの ID | スクロール検出時 |
+| 学習アクティビティ | 日付ごとの「既読セクション数」「スクロール量」「対象パス」 | スクロール／既読時 |
 
-## Third-Party Services
+ユーザー識別子・メールアドレス・端末情報・閲覧履歴・第三者サイトでの行動などは**一切取得しません**。
 
-The Extension does not communicate with any third-party servers. The only external interaction is when users voluntarily share their learning streak or highlights on X (Twitter) via the share button, which opens the X website in a new tab.
+## 3. Data Storage / データの保存場所
 
-## Data Deletion
+すべてのデータはユーザーのローカル端末に保存されます：
 
-Users can delete all stored data at any time through the Extension's settings panel ("全データ削除" button).
+| 保存先 | 保存される情報 |
+|---|---|
+| **localStorage**（ドメインスコープ）| 栞・ハイライト・既読・スクロール位置・各種フラグ |
+| **chrome.storage.sync** | 学習アクティビティログ（日付別カレンダー）。Google アカウントでサインインしている Chrome 間で同期可能 |
 
-## Permissions Used
+`chrome.storage.sync` は Google 提供の同期機構です。本拡張機能の開発元は同期されたデータにアクセスできません。
 
-| Permission | Reason |
-|------------|--------|
-| `storage` | To sync learning activity across devices via chrome.storage.sync |
-| `clipboardWrite` | To copy highlight summaries to clipboard (Markdown export) |
+## 4. Third-Party Sharing / 第三者への共有
 
-## Contact
+**本拡張機能は、いかなるユーザーデータも外部サーバや第三者に送信・共有しません**。
 
-For questions about this privacy policy, please create an issue on the GitHub repository:
-https://github.com/south0120/brain-reader
+例外的に発生する外部通信は次のもののみです：
 
-## Changes
+- **X（旧 Twitter）への共有**：ユーザーが「X でポスト」ボタンを押した場合のみ、X の標準ツイート送信ページが新しいタブで開きます。送信内容はユーザーが事前に確認できます。
 
-We may update this privacy policy from time to time. Changes will be posted on this page.
+それ以外の外部 API・解析サービス・広告ネットワーク等への通信は一切ありません。
+
+## 5. Per-Site Considerations / 各サイトへの配慮
+
+本拡張機能は対象 3 サイトの利用規約を尊重します：
+
+- **記事本文の直接保存はしません**。ハイライト機能は最大 200 文字までのスニペットに限り、各記事の URL や直近の見出し名と一緒にコンテキストとして保存します
+- **Markdown エクスポート出力には著作権注意文言を必ず付与**します：
+  - 「※ 本ファイルは私的使用目的の複製です。著作権は各記事の著者に帰属します。」
+  - 「※ 再配布・公衆送信は禁止されています。」
+- 各サイトの内蔵 UI（tips.jp の `<div class="index headlines">`、note.com の本文 DOM 等）は**読み取り専用**で利用し、書き換えません
+- 課金コンテンツ（Brain の有料部分など）に対して、ペイウォールを回避する処理は一切行いません
+
+## 6. Data Deletion / データの削除
+
+ユーザーは下記のいずれかの方法で、本拡張機能が保存した全データを削除できます：
+
+1. 拡張機能パネル → 統計タブ →「全データ削除」ボタン
+2. Chrome の「拡張機能の削除」を実行（拡張機能のアンインストール）
+3. ブラウザのサイトデータをクリア（brain-market.com / tips.jp / note.com の localStorage を削除）
+
+`chrome.storage.sync` のデータは Google のアカウント設定からも削除可能です。
+
+## 7. Permissions / 権限
+
+| 権限 | 用途 |
+|---|---|
+| `storage` | `chrome.storage.sync` で学習アクティビティログを端末間同期するため |
+| `clipboardWrite` | 「Markdown でコピー」ボタン押下時に出力をクリップボードへ書き込むため |
+| `host_permissions: brain-market.com / tips.jp / note.com` | 各サイトの記事ページに content script を注入するため |
+
+`tabs` `webRequest` `cookies` `bookmarks` `history` `identity` などのプライバシー影響が大きい権限は**一切要求しません**。
+
+## 8. Children's Privacy / 子どもの利用について
+
+本拡張機能は 13 歳未満のユーザーを対象としていません。ユーザー識別情報は取得しないため、特定年齢層のデータが本拡張機能に蓄積されることはありません。
+
+## 9. Changes / 改訂
+
+本ポリシーは拡張機能のアップデートに合わせて更新されることがあります。重要な変更があった場合、`https://south-create.com/brain-reader/privacy/` 上で告知し、`Last updated` を更新します。
+
+## 10. Contact / お問い合わせ
+
+問い合わせ先：南創（south-create.com 運営者）。本ポリシーの解釈や本拡張機能の挙動に関するご質問もこちらへどうぞ。
+
+---
+
+This policy applies to **Brain / Tips / note Reader (学習アシスト)** version 1.3.2 and later.

@@ -1511,7 +1511,12 @@
     document.getElementById('br-export').addEventListener('click', () => {
       if (!ST.highlights.length) { toast('ハイライトがありません', true); return; }
       const today = new Date().toLocaleDateString('ja-JP');
-      let md = `# ${SITE.hashtag}ハイライトまとめ\n作成日: ${today}\n\n---\n\n`;
+      // 著作権・再配布禁止の注意文言を冒頭 blockquote で固定挿入。
+      // tips/note の利用規約レビューを踏まえ、ユーザーが個人ノートとして
+      // ペーストした先（Notion/Obsidian/SNS 等）にもこの旨が一緒に残るようにする。
+      let md = `# ${SITE.hashtag}ハイライトまとめ\n作成日: ${today}\n\n`;
+      md += `> ※ 本ファイルは私的使用目的の複製です。著作権は各記事の著者に帰属します。\n`;
+      md += `> ※ 再配布・公衆送信は禁止されています。\n\n---\n\n`;
       ST.highlights.forEach((hl, i) => {
         md += `## ${i+1}. ${hl.section || '(セクション不明)'}\n> ${hl.text}\n\n`;
         if (hl.note) md += `📝 メモ: ${hl.note}\n\n`;
