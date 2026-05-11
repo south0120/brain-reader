@@ -1,6 +1,12 @@
 # Release Note — v1.3.2
 
-**Release date**: 2026-05-10
+## ハイライト
+
+**v1.3.2 で Manabi-reader にリブランド + tips.jp / note.com 対応 + 学習カレンダー 3 タブ（3 サイト総合 / サイト別 / この記事のみ）。**
+
+旧称「Brain Reader」は同一拡張のアップデートとして継続。製品 URL も `https://south-create.com/manabi-reader/` に移行しました（旧 `/brain-reader/` は 301 リダイレクト予定）。
+
+**Release date**: 2026-05-11
 **Manifest version**: 1.3.2
 **Source**: tag `v1.3.2`（main マージ後に切る）
 
@@ -29,10 +35,11 @@
 
 ## ストア更新版（このリリース）の変更点
 
-- manifest 整理：
-  - `name` を `Brain / Tips / note Reader - 学習アシスト` に統一
-  - `description` を 3 サイト対応版に書き換え
-  - `homepage_url` に `https://south-create.com/brain-reader/` を追加
+- manifest 整理 + Manabi-reader リブランド：
+  - `name` を `Manabi-reader` にリブランド（旧 `Brain / Tips / note Reader - 学習アシスト`）
+  - `action.default_title` を `Manabi-reader` に統一（旧 `Reader (Brain / Tips / note)`）
+  - `description` を Manabi-reader 訴求文に書き換え（3 サイト対応 + Kindle 学習体験を 1 行で表現、132 文字制限内）
+  - `homepage_url` を `https://south-create.com/manabi-reader/` に変更（旧 `/brain-reader/` は 301 リダイレクト予定）
   - `version_name` 削除（ストア提出版は suffix 不要）
 - Markdown エクスポート出力に **著作権・再配布禁止の注意文言を自動挿入**：
   ```
@@ -40,7 +47,7 @@
   > ※ 再配布・公衆送信は禁止されています。
   ```
 - Privacy Policy 更新：3 サイト対応・各社規約配慮文言・データ削除手順を v1.3.2 に合わせて改訂
-- Privacy Policy 公開 URL：https://south-create.com/brain-reader/privacy/
+- Privacy Policy 公開 URL：https://south-create.com/manabi-reader/privacy/
 
 ## マイグレーション保証
 

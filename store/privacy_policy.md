@@ -1,8 +1,8 @@
-# Privacy Policy — Brain / Tips / note Reader (学習アシスト)
+# Privacy Policy — Manabi-reader（旧 Brain Reader）
 
-**Last updated**: May 10, 2026
+**Last updated**: May 11, 2026
 **Extension version**: 1.3.2
-**Hosted version**: https://south-create.com/brain-reader/privacy/
+**Hosted version**: https://south-create.com/manabi-reader/privacy/
 
 > このマークダウン版はソースコード上のリファレンスです。**ユーザー向けの正式版は上記の公開 URL** を参照してください。
 
@@ -10,7 +10,7 @@
 
 ## 1. Overview / 概要
 
-Brain / Tips / note Reader（以下「本拡張機能」）は、以下 3 サイトの長文記事の読書体験を補助する Chrome 拡張機能です。
+Manabi-reader（以下「本拡張機能」、旧称 Brain Reader）は、以下 3 サイトの長文記事の読書体験を補助する Chrome 拡張機能です。
 
 - brain-market.com（Brain）
 - tips.jp（Tips）
@@ -88,7 +88,7 @@ Brain / Tips / note Reader（以下「本拡張機能」）は、以下 3 サイ
 
 ## 9. Changes / 改訂
 
-本ポリシーは拡張機能のアップデートに合わせて更新されることがあります。重要な変更があった場合、`https://south-create.com/brain-reader/privacy/` 上で告知し、`Last updated` を更新します。
+本ポリシーは拡張機能のアップデートに合わせて更新されることがあります。重要な変更があった場合、`https://south-create.com/manabi-reader/privacy/` 上で告知し、`Last updated` を更新します。
 
 ## 10. Contact / お問い合わせ
 
@@ -96,4 +96,4 @@ Brain / Tips / note Reader（以下「本拡張機能」）は、以下 3 サイ
 
 ---
 
-This policy applies to **Brain / Tips / note Reader (学習アシスト)** version 1.3.2 and later.
+This policy applies to **Manabi-reader** (formerly Brain Reader) version 1.3.2 and later.
